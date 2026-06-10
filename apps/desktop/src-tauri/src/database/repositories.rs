@@ -1121,19 +1121,6 @@ pub mod classification {
         })
     }
 
-    fn classified_from_ai(target: &AiTarget, classification: &AiClassification) -> ClassifiedApp {
-        let display_name = if let Some(prefix) = target.prefix.as_ref() {
-            format!("{}: {}", prefix, classification.display_name)
-        } else {
-            classification.display_name.clone()
-        };
-
-        ClassifiedApp {
-            display_name,
-            category: classification.category.clone(),
-        }
-    }
-
     fn context_hash(kind: &str, values: &[&str]) -> String {
         let mut hasher = Sha256::new();
         hasher.update(kind.as_bytes());
