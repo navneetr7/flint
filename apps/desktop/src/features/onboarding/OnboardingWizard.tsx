@@ -207,7 +207,9 @@ export function OnboardingWizard({ onComplete }: { onComplete: () => void }) {
 
   const isAccessibilityReady = permissions?.activeAppAccess === "Ready";
   const anyBrowserReady = Object.values(browserStatuses).some((s) => s?.status === "ready");
-  const canSaveAi = apiKey.trim() !== "" || Boolean(aiSettings?.hasApiKey);
+  const canSaveAi =
+    (apiKey.trim() !== "" || Boolean(aiSettings?.hasApiKey)) &&
+    selectedModel.trim() !== "";
 
   async function handleSaveAndNext() {
     if (canSaveAi) await handleSaveAi();
@@ -635,14 +637,17 @@ function AiStep({
   onApiKeyChange: (k: string) => void;
   onAiEnabledChange: (v: boolean) => void;
 }) {
-  const isKnown = selectedProvider.models.includes(selectedModel);
-  const [showCustomInput, setShowCustomInput] = useState(!isKnown && selectedModel !== "");
-  const [customModel, setCustomModel] = useState(!isKnown ? selectedModel : "");
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customModel, setCustomModel] = useState("");
 
+  // Sync state whenever selectedModel or provider changes (handles async hydration
+  // from saved settings and provider switches).
   useEffect(() => {
-    setShowCustomInput(false);
-    setCustomModel("");
-  }, [selectedProvider.id]);
+    if (!selectedModel) return;
+    const known = selectedProvider.models.includes(selectedModel);
+    setShowCustomInput(!known);
+    setCustomModel(known ? "" : selectedModel);
+  }, [selectedProvider.id, selectedModel]);
 
   function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
     const val = e.target.value;
