@@ -146,7 +146,7 @@ pub fn clear_tray_pill(app: &tauri::AppHandle) {
             let _ = tray.set_icon(Some(icon));
         }
     }
-    let _ = tray.set_title(None);
+    let _ = tray.set_title::<&str>(None);
 }
 
 // ── Animation state ───────────────────────────────────────────────────────────
