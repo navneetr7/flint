@@ -1665,3 +1665,56 @@ pub async fn import_backup(
 
     Ok(())
 }
+
+#[derive(Serialize)]
+pub struct UpdateInfo {
+    pub version: String,
+    pub url: String,
+}
+
+/// Checks GitHub releases for a newer version than the current build.
+/// Returns Some(UpdateInfo) if an update is available, None otherwise.
+/// Cached for 24 hours in the calling layer to avoid hammering the API.
+#[tauri::command]
+pub async fn check_for_update() -> Option<UpdateInfo> {
+    let current = env!("CARGO_PKG_VERSION");
+
+    let client = reqwest::Client::builder()
+        .user_agent("flint-app")
+        .timeout(std::time::Duration::from_secs(8))
+        .build()
+        .ok()?;
+
+    let resp: serde_json::Value = client
+        .get("https://api.github.com/repos/navneetr7/flint/releases/latest")
+        .send()
+        .await
+        .ok()?
+        .json()
+        .await
+        .ok()?;
+
+    let tag = resp["tag_name"].as_str()?;
+    let url = resp["html_url"].as_str()?;
+    let latest = tag.trim_start_matches('v');
+
+    if semver_gt(latest, current) {
+        Some(UpdateInfo { version: tag.to_string(), url: url.to_string() })
+    } else {
+        None
+    }
+}
+
+fn semver_gt(a: &str, b: &str) -> bool {
+    let parse = |v: &str| -> [u32; 3] {
+        let mut p = v.split('.').filter_map(|x| x.parse().ok());
+        [p.next().unwrap_or(0), p.next().unwrap_or(0), p.next().unwrap_or(0)]
+    };
+    parse(a) > parse(b)
+}
+
+/// Opens a URL in the system default browser using macOS `open`.
+#[tauri::command]
+pub fn open_url(url: String) {
+    let _ = std::process::Command::new("open").arg(&url).spawn();
+}

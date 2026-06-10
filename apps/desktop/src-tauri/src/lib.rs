@@ -42,6 +42,7 @@ pub fn run() {
             http_client: reqwest::Client::new(),
         })
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, None))
         .setup(|app| {
             #[cfg(target_os = "macos")]
             app.set_activation_policy(tauri::ActivationPolicy::Accessory);
@@ -115,7 +116,9 @@ pub fn run() {
             commands::is_onboarding_completed,
             commands::mark_onboarding_completed,
             commands::reset_app,
-            commands::save_card_image
+            commands::save_card_image,
+            commands::check_for_update,
+            commands::open_url,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Flint");

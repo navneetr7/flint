@@ -9,6 +9,7 @@ import {
   setShowTrayLabel,
   type PrivacySettings,
 } from "@/shared/api/attentionApi";
+import { enable, disable, isEnabled } from "@tauri-apps/plugin-autostart";
 
 const EXCLUDED_ROW_LIMIT = 2;
 
@@ -21,10 +22,21 @@ export function TrackingPanel({ onPermissionsChange }: Props) {
   const [appName, setAppName] = useState("");
   const [idleDraft, setIdleDraft] = useState<string | null>(null);
   const [showAllExcluded, setShowAllExcluded] = useState(false);
+  const [autostart, setAutostart] = useState(false);
 
   useEffect(() => {
     getPrivacySettings().then(setSettings).catch(() => undefined);
+    isEnabled().then(setAutostart).catch(() => undefined);
   }, []);
+
+  async function handleAutostartToggle() {
+    if (autostart) {
+      await disable();
+    } else {
+      await enable();
+    }
+    setAutostart(await isEnabled());
+  }
 
   async function handleContextAwarenessToggle() {
     const updated = await setCollectWindowTitles(!settings?.collectWindowTitles);
@@ -77,6 +89,12 @@ export function TrackingPanel({ onPermissionsChange }: Props) {
           <span>Dynamic Notifications</span>
           <span className="toggle-track">
             <span className={settings?.showTrayLabel ? "toggle-thumb toggle-thumb-on" : "toggle-thumb"} />
+          </span>
+        </button>
+        <button className="tracking-toggle-btn" type="button" onClick={() => void handleAutostartToggle()}>
+          <span>Launch at login</span>
+          <span className="toggle-track">
+            <span className={autostart ? "toggle-thumb toggle-thumb-on" : "toggle-thumb"} />
           </span>
         </button>
         <label className="tracking-inline-item">

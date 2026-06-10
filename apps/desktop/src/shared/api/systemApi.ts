@@ -240,6 +240,18 @@ export async function resetApp(): Promise<void> {
   await callTauri<void>("reset_app");
 }
 
+export type UpdateInfo = { version: string; url: string };
+
+export async function checkForUpdate(): Promise<UpdateInfo | null> {
+  if (!isTauriRuntime()) return null;
+  return callTauri<UpdateInfo | null>("check_for_update");
+}
+
+export async function openUrl(url: string): Promise<void> {
+  if (!isTauriRuntime()) { window.open(url, "_blank"); return; }
+  await callTauri<void>("open_url", { url });
+}
+
 function fromRustDetectionSnapshot(snapshot: RustDetectionSnapshot): DetectionSnapshot {
   return {
     rawAppName: snapshot.raw_app_name,
