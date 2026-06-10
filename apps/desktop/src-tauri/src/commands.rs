@@ -293,7 +293,7 @@ pub fn mark_onboarding_completed(state: State<AppState>) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub fn reset_app(state: State<AppState>) -> Result<(), String> {
+pub fn reset_app(app: tauri::AppHandle, state: State<AppState>) -> Result<(), String> {
     let database = state
         .database
         .lock()
@@ -323,8 +323,15 @@ pub fn reset_app(state: State<AppState>) -> Result<(), String> {
     )
     .map_err(|e| e.to_string())?;
 
-    // Gate the pill again until onboarding is re-completed
+    // Gate the pill again and reset it to the idle "Flint" state immediately
     crate::system::tray::set_onboarding_done(false);
+    crate::system::tray::clear_tray_pill(&app);
+
+    // Disable launch at login
+    {
+        use tauri_plugin_autostart::ManagerExt;
+        let _ = app.autolaunch().disable();
+    }
 
     // Remove Flint from macOS Accessibility and Automation permissions so the
     // next onboarding run re-prompts. Failure is non-fatal.
@@ -1673,6 +1680,11 @@ pub struct UpdateInfo {
 }
 
 /// Checks GitHub releases for a newer version than the current build.
+#[tauri::command]
+pub fn get_app_version() -> String {
+    env!("CARGO_PKG_VERSION").to_string()
+}
+
 /// Returns Some(UpdateInfo) if an update is available, None otherwise.
 /// Cached for 24 hours in the calling layer to avoid hammering the API.
 #[tauri::command]

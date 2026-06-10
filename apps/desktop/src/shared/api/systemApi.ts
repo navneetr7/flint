@@ -242,6 +242,11 @@ export async function resetApp(): Promise<void> {
 
 export type UpdateInfo = { version: string; url: string };
 
+export async function getAppVersion(): Promise<string> {
+  if (!isTauriRuntime()) return "dev";
+  return callTauri<string>("get_app_version");
+}
+
 export async function checkForUpdate(): Promise<UpdateInfo | null> {
   if (!isTauriRuntime()) return null;
   return callTauri<UpdateInfo | null>("check_for_update");

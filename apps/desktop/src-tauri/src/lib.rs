@@ -117,6 +117,7 @@ pub fn run() {
             commands::mark_onboarding_completed,
             commands::reset_app,
             commands::save_card_image,
+            commands::get_app_version,
             commands::check_for_update,
             commands::open_url,
         ])
