@@ -19,7 +19,24 @@ export function SettingsView() {
     <div className="view-stack">
       <UpdateModal />
       <header className="view-header">
-        <h1>Privacy controls</h1>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <h1 style={{ margin: 0 }}>Privacy controls</h1>
+          {version && (
+            <span style={{
+              fontSize: 11,
+              fontWeight: 500,
+              color: "var(--color-text-soft)",
+              background: "rgba(255,255,255,0.06)",
+              border: "1px solid var(--color-border)",
+              borderRadius: 20,
+              padding: "2px 8px",
+              lineHeight: 1.4,
+              letterSpacing: "0.01em",
+            }}>
+              v{version}
+            </span>
+          )}
+        </div>
         <p>Flint stores data locally and avoids surveillance features by design.</p>
       </header>
 
@@ -31,11 +48,6 @@ export function SettingsView() {
         <DataPortabilityPanel />
       </section>
 
-      {version && (
-        <p style={{ margin: 0, fontSize: 11, color: "var(--color-text-muted)", paddingBottom: 4 }}>
-          Flint v{version}
-        </p>
-      )}
     </div>
   );
 }

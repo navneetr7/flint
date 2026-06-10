@@ -2,10 +2,13 @@ use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
 use std::time::Duration;
 
+const CONFIDENCE_THRESHOLD: u8 = 70;
+
 #[derive(Debug, Clone)]
 pub struct AiClassificationResult {
     pub display_name: String,
     pub category: String,
+    pub confidence: u8,
 }
 
 // ── OpenAI-compatible structs ─────────────────────────────────────────────────
@@ -84,12 +87,25 @@ struct AnthropicContent {
 struct ClassificationPayload {
     display_name: String,
     category: String,
+    confidence: Option<u8>,
+}
+
+#[derive(Debug, Deserialize)]
+struct DdgInstantAnswer {
+    #[serde(rename = "Abstract")]
+    abstract_text: String,
+    #[serde(rename = "AbstractText")]
+    abstract_detail: String,
 }
 
 // ── Public entry point ────────────────────────────────────────────────────────
 
 /// Async (non-blocking) version — use this from Tauri async tasks so no OS
 /// thread is parked waiting on the HTTP response.
+///
+/// When the AI returns confidence below CONFIDENCE_THRESHOLD, a DuckDuckGo
+/// instant-answer lookup is performed and the classification is retried with
+/// the extra context injected into the prompt.
 pub async fn classify_with_ai_async(
     client: &reqwest::Client,
     base_url: &str,
@@ -100,11 +116,26 @@ pub async fn classify_with_ai_async(
     title: Option<&str>,
     timeout: std::time::Duration,
 ) -> Result<AiClassificationResult, String> {
-    if base_url.contains("anthropic") {
-        return classify_anthropic_async(client, base_url, model, api_key, app_name, host, title, timeout)
-            .await;
+    let result = if base_url.contains("anthropic") {
+        classify_anthropic_async(client, base_url, model, api_key, app_name, host, title, None, timeout).await?
+    } else {
+        classify_openai_async(client, base_url, model, api_key, app_name, host, title, None, timeout).await?
+    };
+
+    if result.confidence < CONFIDENCE_THRESHOLD {
+        if let Some(context) = web_search_context(client, app_name, host, title, timeout).await {
+            let enriched = if base_url.contains("anthropic") {
+                classify_anthropic_async(client, base_url, model, api_key, app_name, host, title, Some(&context), timeout).await
+            } else {
+                classify_openai_async(client, base_url, model, api_key, app_name, host, title, Some(&context), timeout).await
+            };
+            if let Ok(r) = enriched {
+                return Ok(r);
+            }
+        }
     }
-    classify_openai_async(client, base_url, model, api_key, app_name, host, title, timeout).await
+
+    Ok(result)
 }
 
 pub fn classify_with_ai(
@@ -120,6 +151,54 @@ pub fn classify_with_ai(
         return classify_anthropic(base_url, model, api_key, app_name, host, title, timeout);
     }
     classify_openai(base_url, model, api_key, app_name, host, title, timeout)
+}
+
+/// Fetch a short description from DuckDuckGo's free instant-answer API.
+/// Returns None on any error or when no useful abstract is found.
+async fn web_search_context(
+    client: &reqwest::Client,
+    app_name: &str,
+    host: Option<&str>,
+    title: Option<&str>,
+    timeout: std::time::Duration,
+) -> Option<String> {
+    let query = build_search_query(app_name, host, title);
+    let response = client
+        .get("https://api.duckduckgo.com/")
+        .query(&[("q", query.as_str()), ("format", "json"), ("no_html", "1"), ("skip_disambig", "1")])
+        .timeout(timeout)
+        .send()
+        .await
+        .ok()?;
+
+    let text = response.text().await.ok()?;
+    let ddg = serde_json::from_str::<DdgInstantAnswer>(&text).ok()?;
+
+    // Prefer the longer AbstractText; fall back to Abstract.
+    let raw = if !ddg.abstract_detail.is_empty() {
+        ddg.abstract_detail
+    } else if !ddg.abstract_text.is_empty() {
+        ddg.abstract_text
+    } else {
+        return None;
+    };
+
+    Some(truncate(&raw, 300))
+}
+
+fn build_search_query(app_name: &str, host: Option<&str>, title: Option<&str>) -> String {
+    // Prioritise host when available (most stable signal for a website).
+    if let Some(h) = host.filter(|h| !h.is_empty() && *h != "none") {
+        return format!("{} website", h);
+    }
+    // Fall back to app name + title snippet.
+    let mut q = app_name.trim().to_string();
+    if let Some(t) = title.filter(|t| !t.is_empty() && *t != "none") {
+        let snippet = truncate(t, 60);
+        q.push(' ');
+        q.push_str(&snippet);
+    }
+    q
 }
 
 // ── OpenAI-compatible path ────────────────────────────────────────────────────
@@ -138,10 +217,10 @@ fn classify_openai(
         model: model.to_string(),
         messages: vec![
             ChatMessage { role: "system".to_string(), content: system_prompt().to_string() },
-            ChatMessage { role: "user".to_string(), content: user_prompt(app_name, host, title) },
+            ChatMessage { role: "user".to_string(), content: user_prompt(app_name, host, title, None) },
         ],
-        max_tokens: if base_url.contains("openai.com") { None } else { Some(80) },
-        max_completion_tokens: if base_url.contains("openai.com") { Some(80) } else { None },
+        max_tokens: if base_url.contains("openai.com") { None } else { Some(120) },
+        max_completion_tokens: if base_url.contains("openai.com") { Some(120) } else { None },
         temperature: 0.0,
         thinking: if base_url.contains("deepseek") {
             Some(ThinkingConfig { kind: "disabled".to_string() })
@@ -184,11 +263,11 @@ fn classify_anthropic(
     let endpoint = format!("{}/v1/messages", base_url.trim().trim_end_matches('/'));
     let request = AnthropicRequest {
         model: model.to_string(),
-        max_tokens: 80,
+        max_tokens: 120,
         system: system_prompt().to_string(),
         messages: vec![AnthropicMessage {
             role: "user".to_string(),
-            content: user_prompt(app_name, host, title),
+            content: user_prompt(app_name, host, title, None),
         }],
     };
 
@@ -224,6 +303,7 @@ async fn classify_openai_async(
     app_name: &str,
     host: Option<&str>,
     title: Option<&str>,
+    web_context: Option<&str>,
     timeout: std::time::Duration,
 ) -> Result<AiClassificationResult, String> {
     let endpoint = format!("{}/chat/completions", base_url.trim().trim_end_matches('/'));
@@ -231,10 +311,10 @@ async fn classify_openai_async(
         model: model.to_string(),
         messages: vec![
             ChatMessage { role: "system".to_string(), content: system_prompt().to_string() },
-            ChatMessage { role: "user".to_string(), content: user_prompt(app_name, host, title) },
+            ChatMessage { role: "user".to_string(), content: user_prompt(app_name, host, title, web_context) },
         ],
-        max_tokens: if base_url.contains("openai.com") { None } else { Some(80) },
-        max_completion_tokens: if base_url.contains("openai.com") { Some(80) } else { None },
+        max_tokens: if base_url.contains("openai.com") { None } else { Some(120) },
+        max_completion_tokens: if base_url.contains("openai.com") { Some(120) } else { None },
         temperature: 0.0,
         thinking: if base_url.contains("deepseek") {
             Some(ThinkingConfig { kind: "disabled".to_string() })
@@ -273,16 +353,17 @@ async fn classify_anthropic_async(
     app_name: &str,
     host: Option<&str>,
     title: Option<&str>,
+    web_context: Option<&str>,
     timeout: std::time::Duration,
 ) -> Result<AiClassificationResult, String> {
     let endpoint = format!("{}/v1/messages", base_url.trim().trim_end_matches('/'));
     let request = AnthropicRequest {
         model: model.to_string(),
-        max_tokens: 80,
+        max_tokens: 120,
         system: system_prompt().to_string(),
         messages: vec![AnthropicMessage {
             role: "user".to_string(),
-            content: user_prompt(app_name, host, title),
+            content: user_prompt(app_name, host, title, web_context),
         }],
     };
 
@@ -364,6 +445,7 @@ fn parse_payload(content: &str) -> Result<AiClassificationResult, String> {
     Ok(AiClassificationResult {
         display_name: payload.display_name,
         category: payload.category,
+        confidence: payload.confidence.unwrap_or(100),
     })
 }
 
@@ -443,7 +525,10 @@ fn system_prompt() -> &'static str {
 Classify the user's most likely purpose — not the content type or format.
 
 Return exactly one JSON object:
-{"display_name":"<clean name>","category":"<category>"}
+{"display_name":"<clean name>","category":"<category>","confidence":<0-100>}
+
+confidence — your certainty in this classification (0-100). Use lower values when
+the app name, host, or title is ambiguous or unfamiliar.
 
 No explanations. JSON only.
 
@@ -469,23 +554,28 @@ Rules:
 - Use learning only when the primary goal is acquiring applicable knowledge; an explanatory or analytical title alone is not enough.
 
 Examples:
-"React Hooks Explained" → learning
-"Kubernetes Networking Deep Dive" → learning
-"Fix login bug - VS Code" → development
-"Ramin Djawadi - The Rains Of Castamere" → entertainment
-"The Science of Iron Man's Suit" → entertainment
-"Why Interstellar's Black Hole Looks Real" → entertainment
-"Every Marvel Easter Egg Explained" → entertainment
-"Premier League Highlights" → entertainment
-"Instagram Home Feed" → social
-"Notion - Sprint Planning" → productivity"#
+"React Hooks Explained" → learning, confidence 95
+"Kubernetes Networking Deep Dive" → learning, confidence 90
+"Fix login bug - VS Code" → development, confidence 98
+"Ramin Djawadi - The Rains Of Castamere" → entertainment, confidence 95
+"The Science of Iron Man's Suit" → entertainment, confidence 90
+"Why Interstellar's Black Hole Looks Real" → entertainment, confidence 92
+"Every Marvel Easter Egg Explained" → entertainment, confidence 88
+"Premier League Highlights" → entertainment, confidence 95
+"Instagram Home Feed" → social, confidence 98
+"Notion - Sprint Planning" → productivity, confidence 96"#
 }
 
-fn user_prompt(app_name: &str, host: Option<&str>, title: Option<&str>) -> String {
-    format!(
-        "App: {}\nWebsite host: {}\nWindow or page title: {}\nClassify this attention event.",
+fn user_prompt(app_name: &str, host: Option<&str>, title: Option<&str>, web_context: Option<&str>) -> String {
+    let mut prompt = format!(
+        "App: {}\nWebsite host: {}\nWindow or page title: {}",
         app_name.trim(),
         host.unwrap_or("none"),
         title.unwrap_or("none")
-    )
+    );
+    if let Some(ctx) = web_context.filter(|c| !c.is_empty()) {
+        prompt.push_str(&format!("\nWeb description: {}", ctx));
+    }
+    prompt.push_str("\nClassify this attention event.");
+    prompt
 }

@@ -42,6 +42,12 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" apps/desktop/src-tauri/Cargo.toml
           sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" apps/desktop/src-tauri/tauri.conf.json
+          # Also update Cargo.lock so the cache fingerprint sees the new version
+          sed -i '' "/^name = \"flint\"/{n;s/^version = \".*\"/version = \"$VERSION\"/;}" apps/desktop/src-tauri/Cargo.lock
+          # Wipe cached flint artifacts so env!("CARGO_PKG_VERSION") is always freshly compiled
+          rm -rf apps/desktop/src-tauri/target/aarch64-apple-darwin/release/.fingerprint/flint-*
+          rm -rf apps/desktop/src-tauri/target/x86_64-apple-darwin/release/.fingerprint/flint-*
+          rm -rf apps/desktop/src-tauri/target/universal-apple-darwin/release/.fingerprint/flint-*
           echo "Building version $VERSION"
 
       - name: Build universal app
