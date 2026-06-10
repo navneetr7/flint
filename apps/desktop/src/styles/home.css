@@ -1213,9 +1213,9 @@
   color: var(--color-text-muted);
 }
 
-.expanded-state-focused   { background: rgba(130, 176, 154, 0.15); color: var(--color-recovery-green); }
-.expanded-state-distracted { background: rgba(203, 155, 38, 0.15);  color: var(--color-drift-orange); }
-.expanded-state-break     { background: rgba(122, 151, 176, 0.12); color: var(--color-focus-blue); }
+.expanded-state-focused   { background: rgba(130, 176, 154, 0.15); color: #7DDCA8; }
+.expanded-state-distracted { background: rgba(203, 155, 38, 0.15);  color: #F0BC2C; }
+.expanded-state-break     { background: rgba(122, 151, 176, 0.12); color: #B8CDD8; }
 
 /* ── Tree desc ─────────────────────────────────────────────────────────────── */
 

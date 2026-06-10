@@ -650,14 +650,13 @@
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
-  opacity: 0.85;
   white-space: nowrap;
 }
 
-.achievement-tier-1 { color: var(--color-text-muted);      }
-.achievement-tier-2 { color: var(--color-focus-green);     }
-.achievement-tier-3 { color: var(--color-recovery-teal);   }
-.achievement-tier-4 { color: var(--color-drift-orange);    }
+.achievement-tier-1 { color: #B8CDD8; }
+.achievement-tier-2 { color: #7DDCA8; }
+.achievement-tier-3 { color: #40C8BE; }
+.achievement-tier-4 { color: #F0BC2C; }
 
 .duration-badge {
   font-size: 13px;
@@ -673,7 +672,7 @@
 }
 
 .duration-badge-neutral {
-  color: var(--color-text-soft);
+  color: var(--color-text-muted);
 }
 
 .duration-badge-distracted {
