@@ -3,26 +3,16 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ArrowUpCircle, X } from "lucide-react";
 import { checkForUpdate, openUrl, type UpdateInfo } from "@/shared/api/systemApi";
 
-const CACHE_KEY = "flint_update_check";
-const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const SESSION_KEY = "flint_update_checked";
 
 export function UpdateModal() {
   const [update, setUpdate] = useState<UpdateInfo | null>(null);
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const cached = localStorage.getItem(CACHE_KEY);
-    if (cached) {
-      try {
-        const { ts, data } = JSON.parse(cached);
-        if (Date.now() - ts < CACHE_TTL_MS) {
-          if (data) { setUpdate(data); setOpen(true); }
-          return;
-        }
-      } catch {}
-    }
+    if (sessionStorage.getItem(SESSION_KEY)) return;
+    sessionStorage.setItem(SESSION_KEY, "1");
     checkForUpdate().then((info) => {
-      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data: info }));
       if (info) { setUpdate(info); setOpen(true); }
     }).catch(() => {});
   }, []);
