@@ -37,6 +37,13 @@ jobs:
       - name: Install dependencies
         run: npm install
 
+      - name: Sync version from tag
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          sed -i '' "s/^version = \".*\"/version = \"$VERSION\"/" apps/desktop/src-tauri/Cargo.toml
+          sed -i '' "s/\"version\": \".*\"/\"version\": \"$VERSION\"/" apps/desktop/src-tauri/tauri.conf.json
+          echo "Building version $VERSION"
+
       - name: Build universal app
         run: npm run tauri -- build --target universal-apple-darwin
         working-directory: apps/desktop
