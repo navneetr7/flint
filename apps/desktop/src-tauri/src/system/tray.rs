@@ -745,7 +745,8 @@ fn render_pill(category: &str, duration_seconds: u64, is_idle: bool, ring_progre
     if amazing {
         let block = LAST_ANNOUNCED_BLOCK.load(Ordering::Relaxed);
         let label = achievement_label(block);
-        let gold = [255, 230, 80, 255];
+        // --color-recovery-teal: #60A8A0 — same teal as the focus ring arc
+        let teal = [96, 168, 160, 255];
         let text_w = measure_w(&font, amazing_scale, label);
         let natural_w = OUTER_PAD_L + text_w + OUTER_PAD_R;
         if outer_w_override.is_none() {
@@ -758,10 +759,10 @@ fn render_pill(category: &str, duration_seconds: u64, is_idle: bool, ring_progre
             .unwrap_or(natural_w);
 
         let mut img: RgbaImage = ImageBuffer::from_pixel(outer_w, OUTER_H, Rgba([0, 0, 0, 0]));
-        fill_capsule(&mut img, 0, 0, outer_w, OUTER_H, [28, 20, 0, 255]);
+        fill_capsule(&mut img, 0, 0, outer_w, OUTER_H, [8, 22, 20, 255]);
         let baseline = text_baseline(&font, amazing_scale, OUTER_H);
         for dx in 0..3 {
-            draw_text(&mut img, &font, amazing_scale, label, OUTER_PAD_L as f32 + dx as f32 * 0.4, baseline, gold);
+            draw_text(&mut img, &font, amazing_scale, label, OUTER_PAD_L as f32 + dx as f32 * 0.4, baseline, teal);
         }
         let fade = f32::from_bits(AMAZING_ALPHA.load(Ordering::Relaxed)).clamp(0.0, 1.0);
         if fade < 0.999 {
@@ -792,11 +793,16 @@ fn render_pill(category: &str, duration_seconds: u64, is_idle: bool, ring_progre
             .map(|ow| ow.max(OUTER_PAD_L + text_w + 4))
             .unwrap_or(natural_w);
 
+        // --color-drift-magenta: #C070A0 for entertainment/social, amber for generic
+        let (bg, text_col) = match DRIFT_MSG_CAT.load(Ordering::Relaxed) {
+            1 | 2 => ([24, 10, 20, 255], [192, 112, 160, 255]),
+            _     => ([38, 18,  0, 255], [203, 155,  38, 255]),
+        };
         let mut img: RgbaImage = ImageBuffer::from_pixel(outer_w, OUTER_H, Rgba([0, 0, 0, 0]));
-        fill_capsule(&mut img, 0, 0, outer_w, OUTER_H, [38, 18, 0, 255]);
+        fill_capsule(&mut img, 0, 0, outer_w, OUTER_H, bg);
         let baseline = text_baseline(&font, label_scale, OUTER_H);
         draw_text(&mut img, &font, label_scale, msg,
-            OUTER_PAD_L as f32, baseline, [255, 210, 100, 255]);
+            OUTER_PAD_L as f32, baseline, text_col);
 
         return encode_png(img, outer_w, OUTER_H);
     }
