@@ -4,6 +4,7 @@ import { appRoutes } from "@/app/routes";
 import { isOnboardingCompleted } from "@/shared/api/attentionApi";
 import { cx } from "@/shared/lib/cx";
 import { OnboardingWizard } from "@/features/onboarding/OnboardingWizard";
+import { UpdateBanner } from "@/features/update/UpdateBanner";
 import { FlintOrb } from "./FlintOrb";
 
 export function DesktopShell() {
@@ -65,6 +66,7 @@ export function DesktopShell() {
       </aside>
 
       <section className="content-shell">
+        <UpdateBanner />
         <AnimatePresence mode="wait">
           <motion.div
             key={activeRoute.id}

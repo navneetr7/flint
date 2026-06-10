@@ -30,6 +30,7 @@ sha2 = "0.10"
 ab_glyph = "0.2"
 image = { version = "0.25", default-features = false, features = ["png"] }
 png = "0.17"
+tauri-plugin-autostart = "2.5.1"
 
 [patch.crates-io]
 tray-icon = { path = "vendor/tray-icon" }
