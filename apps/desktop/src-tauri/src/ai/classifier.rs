@@ -1,6 +1,4 @@
-use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 const CONFIDENCE_THRESHOLD: u8 = 70;
 
@@ -138,20 +136,6 @@ pub async fn classify_with_ai_async(
     Ok(result)
 }
 
-pub fn classify_with_ai(
-    base_url: &str,
-    model: &str,
-    api_key: &str,
-    app_name: &str,
-    host: Option<&str>,
-    title: Option<&str>,
-    timeout: std::time::Duration,
-) -> Result<AiClassificationResult, String> {
-    if base_url.contains("anthropic") {
-        return classify_anthropic(base_url, model, api_key, app_name, host, title, timeout);
-    }
-    classify_openai(base_url, model, api_key, app_name, host, title, timeout)
-}
 
 /// Fetch a short description from DuckDuckGo's free instant-answer API.
 /// Returns None on any error or when no useful abstract is found.
@@ -199,98 +183,6 @@ fn build_search_query(app_name: &str, host: Option<&str>, title: Option<&str>) -
         q.push_str(&snippet);
     }
     q
-}
-
-// ── OpenAI-compatible path ────────────────────────────────────────────────────
-
-fn classify_openai(
-    base_url: &str,
-    model: &str,
-    api_key: &str,
-    app_name: &str,
-    host: Option<&str>,
-    title: Option<&str>,
-    timeout: std::time::Duration,
-) -> Result<AiClassificationResult, String> {
-    let endpoint = format!("{}/chat/completions", base_url.trim().trim_end_matches('/'));
-    let request = ChatCompletionRequest {
-        model: model.to_string(),
-        messages: vec![
-            ChatMessage { role: "system".to_string(), content: system_prompt().to_string() },
-            ChatMessage { role: "user".to_string(), content: user_prompt(app_name, host, title, None) },
-        ],
-        max_tokens: if base_url.contains("openai.com") { None } else { Some(120) },
-        max_completion_tokens: if base_url.contains("openai.com") { Some(120) } else { None },
-        temperature: 0.0,
-        thinking: if base_url.contains("deepseek") {
-            Some(ThinkingConfig { kind: "disabled".to_string() })
-        } else {
-            None
-        },
-    };
-
-    let response = build_client(timeout)?
-        .post(endpoint)
-        .bearer_auth(api_key)
-        .json(&request)
-        .send()
-        .map_err(network_error)?;
-
-    let text = check_status(response)?;
-    let completion = serde_json::from_str::<ChatCompletionResponse>(&text)
-        .map_err(|e| format!("Unable to parse AI response: {e}"))?;
-    let content = completion
-        .choices
-        .first()
-        .map(|c| c.message.content.trim())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| "AI response did not include a classification".to_string())?;
-
-    parse_payload(content)
-}
-
-// ── Anthropic native path ─────────────────────────────────────────────────────
-
-fn classify_anthropic(
-    base_url: &str,
-    model: &str,
-    api_key: &str,
-    app_name: &str,
-    host: Option<&str>,
-    title: Option<&str>,
-    timeout: std::time::Duration,
-) -> Result<AiClassificationResult, String> {
-    let endpoint = format!("{}/v1/messages", base_url.trim().trim_end_matches('/'));
-    let request = AnthropicRequest {
-        model: model.to_string(),
-        max_tokens: 120,
-        system: system_prompt().to_string(),
-        messages: vec![AnthropicMessage {
-            role: "user".to_string(),
-            content: user_prompt(app_name, host, title, None),
-        }],
-    };
-
-    let response = build_client(timeout)?
-        .post(endpoint)
-        .header("x-api-key", api_key)
-        .header("anthropic-version", "2023-06-01")
-        .json(&request)
-        .send()
-        .map_err(network_error)?;
-
-    let text = check_status(response)?;
-    let completion = serde_json::from_str::<AnthropicResponse>(&text)
-        .map_err(|e| format!("Unable to parse Anthropic response: {e}"))?;
-    let content = completion
-        .content
-        .iter()
-        .find(|c| c.kind == "text")
-        .map(|c| c.text.trim())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| "Anthropic response contained no text".to_string())?;
-
-    parse_payload(content)
 }
 
 // ── Async implementations ─────────────────────────────────────────────────────
@@ -411,13 +303,6 @@ fn network_error_str(msg: &str) -> String {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn build_client(timeout: Duration) -> Result<Client, String> {
-    Client::builder()
-        .timeout(timeout)
-        .build()
-        .map_err(|e| format!("Unable to create AI client: {e}"))
-}
-
 fn network_error(error: reqwest::Error) -> String {
     let msg = error.to_string();
     if msg.contains("dns") || msg.contains("connect") || msg.contains("timeout") {
@@ -427,15 +312,7 @@ fn network_error(error: reqwest::Error) -> String {
     }
 }
 
-fn check_status(response: reqwest::blocking::Response) -> Result<String, String> {
-    let status = response.status();
-    let body = response.text().unwrap_or_default();
-    if status.is_success() {
-        Ok(body)
-    } else {
-        Err(friendly_api_error(status.as_u16(), &body))
-    }
-}
+
 
 fn parse_payload(content: &str) -> Result<AiClassificationResult, String> {
     let json = extract_json(content)

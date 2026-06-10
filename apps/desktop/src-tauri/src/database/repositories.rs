@@ -314,7 +314,7 @@ pub mod classification {
     use rusqlite::{params, Connection, OptionalExtension, Result};
     use sha2::{Digest, Sha256};
 
-    use crate::{ai::classifier::classify_with_ai, encryption::vault::LocalVault};
+    use crate::encryption::vault::LocalVault;
 
     #[derive(Debug, Clone)]
     pub struct ClassifiedApp {
@@ -490,48 +490,6 @@ pub mod classification {
             }
 
             Ok(local)
-        }
-
-        pub fn classify_app_with_context(
-            &self,
-            app_name: &str,
-            window_title: &Option<String>,
-            timeout: std::time::Duration,
-        ) -> Result<ClassifiedApp> {
-            let local = self.classify_app(app_name)?;
-            let Some(target) = ai_target(app_name, window_title, &local) else {
-                return Ok(local);
-            };
-
-            // youtube_title / page_title: cache by title hash in ai_classifications
-            // (content-specific — the same domain can be learning or entertainment on different pages)
-            if target.kind == "youtube_title" || target.kind == "page_title" {
-                if let Some(cached) = self.find_ai_classification(&target.hash)? {
-                    return Ok(classified_from_ai(&target, &cached));
-                }
-            }
-
-            let settings = self.deepseek_settings()?;
-            if !settings.enabled {
-                return Ok(local);
-            }
-            let encrypted_api_key = settings.encrypted_api_key.as_ref().ok_or_else(|| {
-                ai_error("AI classification is enabled but no DeepSeek API key is saved")
-            })?;
-            let api_key = LocalVault::decrypt_secret(encrypted_api_key).map_err(ai_error)?;
-
-            let ai_result = classify_with_ai(
-                &settings.base_url,
-                &settings.model,
-                &api_key,
-                app_name,
-                target.host.as_deref(),
-                target.title.as_deref(),
-                timeout,
-            )
-            .map_err(ai_error)?;
-
-            self.apply_ai_result_inner(&target, &settings.provider, &settings.model, ai_result)
         }
 
         /// Collect everything needed for an AI call without making it.
