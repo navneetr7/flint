@@ -3,7 +3,7 @@ use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, State};
 
 use crate::{
-    ai::{attention_summary::{summarize_attention_with_ai, AttentionSummaryResult}, classifier::classify_with_ai},
+    ai::{attention_summary::{summarize_attention_with_ai, AttentionSummaryResult}},
     app_tracking::tracker::AttentionTracker,
     attention::event::AttentionEvent,
     database::repositories::{
@@ -953,7 +953,8 @@ pub fn set_ai_classification_settings(
 
 #[tauri::command]
 pub async fn test_ai_config(state: State<'_, AppState>) -> Result<String, String> {
-    // Extract config while briefly holding the DB lock (synchronous, fast).
+    use crate::ai::classifier::classify_with_ai_async;
+
     let (base_url, model, api_key) = {
         let database = state
             .database
@@ -967,22 +968,20 @@ pub async fn test_ai_config(state: State<'_, AppState>) -> Result<String, String
         (config.base_url, config.model, config.api_key)
     };
 
-    // Run the blocking HTTP call on a dedicated worker thread so the Tauri
-    // main event loop and all other IPC commands remain fully responsive.
     let model_label = model.clone();
-    tauri::async_runtime::spawn_blocking(move || {
-        classify_with_ai(
-            &base_url,
-            &model,
-            &api_key,
-            "Visual Studio Code",
-            None,
-            Some("main.rs — Flow"),
-            std::time::Duration::from_secs(30),
-        )
-    })
+    let client = state.http_client.clone();
+    classify_with_ai_async(
+        &client,
+        &base_url,
+        &model,
+        &api_key,
+        "Visual Studio Code",
+        None,
+        Some("main.rs — Flow"),
+        std::time::Duration::from_secs(30),
+    )
     .await
-    .map_err(|e| e.to_string())??;
+    .map_err(|e| e)?;
 
     Ok(format!("✓ Connected — {model_label} responded successfully"))
 }

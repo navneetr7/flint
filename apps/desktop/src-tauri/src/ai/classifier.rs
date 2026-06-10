@@ -1,11 +1,10 @@
-use reqwest::blocking::Client;
 use serde::{Deserialize, Serialize};
-use std::time::Duration;
 
 #[derive(Debug, Clone)]
 pub struct AiClassificationResult {
     pub display_name: String,
     pub category: String,
+    pub confidence: u8,
 }
 
 // ── OpenAI-compatible structs ─────────────────────────────────────────────────
@@ -84,12 +83,11 @@ struct AnthropicContent {
 struct ClassificationPayload {
     display_name: String,
     category: String,
+    confidence: Option<u8>,
 }
 
 // ── Public entry point ────────────────────────────────────────────────────────
 
-/// Async (non-blocking) version — use this from Tauri async tasks so no OS
-/// thread is parked waiting on the HTTP response.
 pub async fn classify_with_ai_async(
     client: &reqwest::Client,
     base_url: &str,
@@ -101,117 +99,10 @@ pub async fn classify_with_ai_async(
     timeout: std::time::Duration,
 ) -> Result<AiClassificationResult, String> {
     if base_url.contains("anthropic") {
-        return classify_anthropic_async(client, base_url, model, api_key, app_name, host, title, timeout)
-            .await;
+        classify_anthropic_async(client, base_url, model, api_key, app_name, host, title, timeout).await
+    } else {
+        classify_openai_async(client, base_url, model, api_key, app_name, host, title, timeout).await
     }
-    classify_openai_async(client, base_url, model, api_key, app_name, host, title, timeout).await
-}
-
-pub fn classify_with_ai(
-    base_url: &str,
-    model: &str,
-    api_key: &str,
-    app_name: &str,
-    host: Option<&str>,
-    title: Option<&str>,
-    timeout: std::time::Duration,
-) -> Result<AiClassificationResult, String> {
-    if base_url.contains("anthropic") {
-        return classify_anthropic(base_url, model, api_key, app_name, host, title, timeout);
-    }
-    classify_openai(base_url, model, api_key, app_name, host, title, timeout)
-}
-
-// ── OpenAI-compatible path ────────────────────────────────────────────────────
-
-fn classify_openai(
-    base_url: &str,
-    model: &str,
-    api_key: &str,
-    app_name: &str,
-    host: Option<&str>,
-    title: Option<&str>,
-    timeout: std::time::Duration,
-) -> Result<AiClassificationResult, String> {
-    let endpoint = format!("{}/chat/completions", base_url.trim().trim_end_matches('/'));
-    let request = ChatCompletionRequest {
-        model: model.to_string(),
-        messages: vec![
-            ChatMessage { role: "system".to_string(), content: system_prompt().to_string() },
-            ChatMessage { role: "user".to_string(), content: user_prompt(app_name, host, title) },
-        ],
-        max_tokens: if base_url.contains("openai.com") { None } else { Some(80) },
-        max_completion_tokens: if base_url.contains("openai.com") { Some(80) } else { None },
-        temperature: 0.0,
-        thinking: if base_url.contains("deepseek") {
-            Some(ThinkingConfig { kind: "disabled".to_string() })
-        } else {
-            None
-        },
-    };
-
-    let response = build_client(timeout)?
-        .post(endpoint)
-        .bearer_auth(api_key)
-        .json(&request)
-        .send()
-        .map_err(network_error)?;
-
-    let text = check_status(response)?;
-    let completion = serde_json::from_str::<ChatCompletionResponse>(&text)
-        .map_err(|e| format!("Unable to parse AI response: {e}"))?;
-    let content = completion
-        .choices
-        .first()
-        .map(|c| c.message.content.trim())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| "AI response did not include a classification".to_string())?;
-
-    parse_payload(content)
-}
-
-// ── Anthropic native path ─────────────────────────────────────────────────────
-
-fn classify_anthropic(
-    base_url: &str,
-    model: &str,
-    api_key: &str,
-    app_name: &str,
-    host: Option<&str>,
-    title: Option<&str>,
-    timeout: std::time::Duration,
-) -> Result<AiClassificationResult, String> {
-    let endpoint = format!("{}/v1/messages", base_url.trim().trim_end_matches('/'));
-    let request = AnthropicRequest {
-        model: model.to_string(),
-        max_tokens: 80,
-        system: system_prompt().to_string(),
-        messages: vec![AnthropicMessage {
-            role: "user".to_string(),
-            content: user_prompt(app_name, host, title),
-        }],
-    };
-
-    let response = build_client(timeout)?
-        .post(endpoint)
-        .header("x-api-key", api_key)
-        .header("anthropic-version", "2023-06-01")
-        .json(&request)
-        .send()
-        .map_err(network_error)?;
-
-    let text = check_status(response)?;
-    let completion = serde_json::from_str::<AnthropicResponse>(&text)
-        .map_err(|e| format!("Unable to parse Anthropic response: {e}"))?;
-    let content = completion
-        .content
-        .iter()
-        .find(|c| c.kind == "text")
-        .map(|c| c.text.trim())
-        .filter(|s| !s.is_empty())
-        .ok_or_else(|| "Anthropic response contained no text".to_string())?;
-
-    parse_payload(content)
 }
 
 // ── Async implementations ─────────────────────────────────────────────────────
@@ -233,8 +124,8 @@ async fn classify_openai_async(
             ChatMessage { role: "system".to_string(), content: system_prompt().to_string() },
             ChatMessage { role: "user".to_string(), content: user_prompt(app_name, host, title) },
         ],
-        max_tokens: if base_url.contains("openai.com") { None } else { Some(80) },
-        max_completion_tokens: if base_url.contains("openai.com") { Some(80) } else { None },
+        max_tokens: if base_url.contains("openai.com") { None } else { Some(120) },
+        max_completion_tokens: if base_url.contains("openai.com") { Some(120) } else { None },
         temperature: 0.0,
         thinking: if base_url.contains("deepseek") {
             Some(ThinkingConfig { kind: "disabled".to_string() })
@@ -278,7 +169,7 @@ async fn classify_anthropic_async(
     let endpoint = format!("{}/v1/messages", base_url.trim().trim_end_matches('/'));
     let request = AnthropicRequest {
         model: model.to_string(),
-        max_tokens: 80,
+        max_tokens: 120,
         system: system_prompt().to_string(),
         messages: vec![AnthropicMessage {
             role: "user".to_string(),
@@ -330,31 +221,6 @@ fn network_error_str(msg: &str) -> String {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-fn build_client(timeout: Duration) -> Result<Client, String> {
-    Client::builder()
-        .timeout(timeout)
-        .build()
-        .map_err(|e| format!("Unable to create AI client: {e}"))
-}
-
-fn network_error(error: reqwest::Error) -> String {
-    let msg = error.to_string();
-    if msg.contains("dns") || msg.contains("connect") || msg.contains("timeout") {
-        "Could not reach endpoint — check the base URL".to_string()
-    } else {
-        format!("Request failed: {error}")
-    }
-}
-
-fn check_status(response: reqwest::blocking::Response) -> Result<String, String> {
-    let status = response.status();
-    let body = response.text().unwrap_or_default();
-    if status.is_success() {
-        Ok(body)
-    } else {
-        Err(friendly_api_error(status.as_u16(), &body))
-    }
-}
 
 fn parse_payload(content: &str) -> Result<AiClassificationResult, String> {
     let json = extract_json(content)
@@ -364,6 +230,7 @@ fn parse_payload(content: &str) -> Result<AiClassificationResult, String> {
     Ok(AiClassificationResult {
         display_name: payload.display_name,
         category: payload.category,
+        confidence: payload.confidence.unwrap_or(100),
     })
 }
 
@@ -443,7 +310,10 @@ fn system_prompt() -> &'static str {
 Classify the user's most likely purpose — not the content type or format.
 
 Return exactly one JSON object:
-{"display_name":"<clean name>","category":"<category>"}
+{"display_name":"<clean name>","category":"<category>","confidence":<0-100>}
+
+confidence — your certainty in this classification (0-100). Use lower values when
+the app name, host, or title is ambiguous or unfamiliar.
 
 No explanations. JSON only.
 
@@ -469,16 +339,16 @@ Rules:
 - Use learning only when the primary goal is acquiring applicable knowledge; an explanatory or analytical title alone is not enough.
 
 Examples:
-"React Hooks Explained" → learning
-"Kubernetes Networking Deep Dive" → learning
-"Fix login bug - VS Code" → development
-"Ramin Djawadi - The Rains Of Castamere" → entertainment
-"The Science of Iron Man's Suit" → entertainment
-"Why Interstellar's Black Hole Looks Real" → entertainment
-"Every Marvel Easter Egg Explained" → entertainment
-"Premier League Highlights" → entertainment
-"Instagram Home Feed" → social
-"Notion - Sprint Planning" → productivity"#
+"React Hooks Explained" → learning, confidence 95
+"Kubernetes Networking Deep Dive" → learning, confidence 90
+"Fix login bug - VS Code" → development, confidence 98
+"Ramin Djawadi - The Rains Of Castamere" → entertainment, confidence 95
+"The Science of Iron Man's Suit" → entertainment, confidence 90
+"Why Interstellar's Black Hole Looks Real" → entertainment, confidence 92
+"Every Marvel Easter Egg Explained" → entertainment, confidence 88
+"Premier League Highlights" → entertainment, confidence 95
+"Instagram Home Feed" → social, confidence 98
+"Notion - Sprint Planning" → productivity, confidence 96"#
 }
 
 fn user_prompt(app_name: &str, host: Option<&str>, title: Option<&str>) -> String {
