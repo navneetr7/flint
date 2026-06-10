@@ -1,0 +1,27 @@
+{
+  "name": "flint",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "npm run dev -w @flint/desktop",
+    "build": "npm run build -w @flint/desktop",
+    "lint": "npm run lint -w @flint/desktop",
+    "tauri:build": "npm run tauri -w @flint/desktop -- build",
+    "tauri:dev": "npm run tauri -w @flint/desktop -- dev",
+    "test": "npm run test -w @flint/domain",
+    "typecheck": "npm run typecheck -w @flint/desktop"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.33.0",
+    "@typescript-eslint/parser": "^8.33.0",
+    "eslint": "^9.27.0",
+    "prettier": "^3.5.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.1.4"
+  }
+}

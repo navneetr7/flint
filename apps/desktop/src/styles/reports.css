@@ -1,0 +1,347 @@
+/* ==========================================================================
+   Dedicated Reports Workspace Styles
+   ========================================================================== */
+
+.reports-view-stack,
+.insights-view-stack {
+  overflow-y: auto !important;
+  overflow-x: hidden !important;
+  padding-bottom: 40px;
+}
+
+.reports-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 100%;
+}
+
+.reports-summary-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: 28px;
+  width: 100%;
+}
+
+/* Focus Balance Dial Card */
+.reports-dial-card {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border-radius: 20px;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  backdrop-filter: blur(28px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+.reports-dial-container {
+  width: 80px;
+  height: 80px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.reports-dial-svg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.reports-dial-svg .dial-track {
+  fill: none;
+  stroke: rgba(255, 255, 255, 0.06);
+  stroke-width: 8;
+}
+
+.reports-dial-svg .dial-value {
+  fill: none;
+  stroke: var(--color-focus-cyan);
+  stroke-width: 8;
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 4px rgba(199, 215, 219, 0.4));
+}
+
+.dial-label-content {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+
+.dial-label-content strong {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--color-text);
+}
+
+.dial-label-content span {
+  font-size: 8px;
+  font-weight: 700;
+  color: var(--color-text-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 1px;
+}
+
+.dial-desc {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.dial-desc h4 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.dial-desc p {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--color-text-muted);
+}
+
+.dial-desc p strong {
+  color: var(--color-focus-cyan);
+}
+
+/* Metric Cards Grid */
+.reports-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.reports-rhythm-panel {
+  border-radius: 24px !important;
+  padding: 28px !important;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+.heatmap-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 8px;
+}
+
+.reports-header-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.reports-header-group h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-focus-purple);
+}
+
+/* Split row */
+.reports-split-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
+  gap: 28px;
+  width: 100%;
+}
+
+.reports-domains-card {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  gap: 20px !important;
+}
+
+.reports-distribution-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.reports-distribution-bar {
+  display: flex;
+  height: 24px;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.distribution-segment {
+  height: 100%;
+  transition: all 0.3s ease;
+  border-right: 1px solid rgba(12, 17, 28, 0.25);
+}
+
+.distribution-segment:last-child {
+  border-right: none;
+}
+
+.distribution-segment:hover {
+  filter: brightness(1.2) saturate(1.1);
+  transform: scaleY(1.08);
+}
+
+.reports-domains-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.reports-domain-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.015);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+
+.domain-name-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+
+.domain-color-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 99px;
+}
+
+.domain-values-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.domain-values-group strong {
+  font-size: 13px;
+  color: var(--color-text);
+  font-weight: 700;
+}
+
+.domain-values-group small {
+  font-size: 11px;
+  color: var(--color-text-soft);
+  font-weight: 600;
+}
+
+/* Top Ledger Card */
+.reports-ledgers-card {
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+  gap: 20px !important;
+}
+
+.reports-ledgers-split {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.reports-ledger-col {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.reports-ledger-col h4 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--color-text-muted);
+}
+
+.reports-ledger-col h4 svg {
+  margin-bottom: -1px;
+}
+
+.ledger-rows-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ledger-row-block {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ledger-row-text {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+}
+
+.ledger-rank {
+  color: var(--color-text-soft);
+  font-weight: 700;
+  margin-right: 8px;
+  font-family: monospace;
+}
+
+.ledger-row-name {
+  color: var(--color-text-muted);
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.ledger-row-text strong {
+  color: var(--color-text);
+  font-weight: 700;
+  margin-left: 8px;
+}
+
+.ledger-row-progress-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.03);
+  overflow: hidden;
+}
+
+.ledger-row-progress-fill {
+  height: 100%;
+  border-radius: 99px;
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ledger-row-progress-fill.bg-cyan {
+  background: linear-gradient(90deg, var(--color-focus-blue), var(--color-focus-cyan));
+  box-shadow: 0 0 6px rgba(199, 215, 219, 0.3);
+}
+
+.ledger-row-progress-fill.bg-orange {
+  background: linear-gradient(90deg, rgba(203, 155, 38, 0.35), var(--color-drift-orange));
+  box-shadow: 0 0 6px rgba(203, 155, 38, 0.25);
+}
+
+.ledger-empty {
+  margin: 0;
+  font-size: 13px;
+  color: var(--color-text-soft);
+  padding: 12px 0;
+  text-align: center;
+}
+

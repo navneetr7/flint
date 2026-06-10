@@ -1,0 +1,52 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Flint",
+  "version": "0.1.0",
+  "identifier": "com.flint.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "macOSPrivateApi": true,
+    "windows": [
+      {
+        "title": "Flint",
+        "width": 1360,
+        "height": 920,
+        "minWidth": 1240,
+        "minHeight": 840,
+        "maxWidth": 1520,
+        "maxHeight": 1040,
+        "transparent": false,
+        "decorations": true,
+        "visible": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg", "app"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "category": "Productivity",
+    "copyright": "© 2026 Flint. All rights reserved.",
+    "shortDescription": "A local-first attention mirror for focus, drift, and recovery.",
+    "longDescription": "Flint tracks your active applications locally and visualises focus patterns, attention drift, and recovery. No screenshots, no keylogging, no cloud — all data stays on your device.",
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "entitlements": "Entitlements.plist",
+      "signingIdentity": null
+    }
+  }
+}

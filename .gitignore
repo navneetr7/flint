@@ -1,0 +1,49 @@
+# ── Dependencies ──────────────────────────────────────────────────────────────
+node_modules/
+
+# ── Build output ──────────────────────────────────────────────────────────────
+dist/
+apps/desktop/src-tauri/target/
+
+# ── Environment ───────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.*.local
+
+# ── Logs ──────────────────────────────────────────────────────────────────────
+*.log
+npm-debug.log*
+
+# ── macOS ─────────────────────────────────────────────────────────────────────
+.DS_Store
+**/.DS_Store
+
+# ── Dev database (SQLite files written at runtime under src-tauri/) ───────────
+**/*.sqlite
+**/*.sqlite-shm
+**/*.sqlite-wal
+
+# ── Internal docs (design, architecture, product, privacy) ────────────────────
+docs/
+
+# ── Scratch / reference assets dropped in repo root ──────────────────────────
+# These are loose research files. Real assets live in:
+#   apps/desktop/public/app-icons/   ← app icon SVGs (shipped)
+#   apps/desktop/src-tauri/icons/    ← Tauri bundle icons (shipped)
+/chrome-logo-svgrepo-com.svg
+/claude-color.svg
+/claudecode-color.svg
+/Flameshot_logo.svg
+/openai.svg
+/flint.png
+
+# ── AI tool session files ─────────────────────────────────────────────────────
+.claude/
+.antigravitycli/
+
+# ── Editor / OS ───────────────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.swp
+*.swo
+Thumbs.db

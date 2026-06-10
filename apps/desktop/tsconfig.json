@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@flint/domain": ["../../packages/domain/src/index.ts"],
+      "@flint/ui": ["../../packages/ui/src/index.ts"]
+    }
+  },
+  "include": ["src", "../../packages/domain/src", "../../packages/ui/src"],
+  "references": []
+}

@@ -1,0 +1,83 @@
+:root {
+  color-scheme: dark;
+  font-family:
+    'Plus Jakarta Sans', Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-feature-settings: "cv01", "cv02", "cv03";
+
+  /* ── Palette ─────────────────────────────────────────────────────── */
+  --palette-little-boy-blu: #C7D7DB;
+  --palette-duck-sauce: #CB9B26;
+  --palette-dyers-woad: #7A97B0;
+  --palette-purple-pool: #474A79;
+  --palette-bastille: #2D2C33;
+  --palette-piano-black: #18181A;
+
+  /* ── Backgrounds ─────────────────────────────────────────────────── */
+  --color-bg: #18181A;
+  --color-surface: rgba(45, 44, 51, 0.72);
+  --color-surface-strong: rgba(45, 44, 51, 0.92);
+
+  /* ── Borders ─────────────────────────────────────────────────────── */
+  --color-border: rgba(122, 151, 176, 0.18);
+
+  /* ── Text ────────────────────────────────────────────────────────── */
+  --color-text: #C7D7DB;
+  --color-text-muted: #7A97B0;
+  --color-text-soft: rgba(122, 151, 176, 0.58);
+
+  /* ── Semantic: Focus / Work ──────────────────────────────────────── */
+  --color-focus-blue: #7A97B0;
+  --color-focus-cyan: #C7D7DB;
+  --color-focus-green: #82B09A;
+  --color-focus-purple: #9090C8;
+
+  /* ── Semantic: Drift / Distraction ──────────────────────────────── */
+  --color-drift-orange: #CB9B26;
+  --color-drift-magenta: #C070A0;
+  --color-drift-red: #C06878;
+
+  /* ── Semantic: Recovery ──────────────────────────────────────────── */
+  --color-recovery-teal: #60A8A0;
+  --color-recovery-green: #82B09A;
+
+  /* ── Drift path ──────────────────────────────────────────────────── */
+  --drift-path-focus: var(--color-focus-cyan);
+  --drift-path-drift: var(--color-drift-magenta);
+  --drift-path-recovery: var(--color-recovery-teal);
+  --drift-path-neutral: rgba(122, 151, 176, 0.55);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-width: 0;
+  min-height: 680px;
+  margin: 0;
+  overflow: hidden;
+  background-color: #18181A;
+  background-image:
+    radial-gradient(circle, rgba(122, 151, 176, 0.13) 1px, transparent 1px),
+    radial-gradient(circle at 72% 14%, rgba(71, 74, 121, 0.22), transparent 36%),
+    radial-gradient(circle at 18% 82%, rgba(203, 155, 38, 0.07), transparent 30%);
+  background-size: 26px 26px, 100% 100%, 100% 100%;
+  color: var(--color-text);
+}
+
+button {
+  font: inherit;
+}
+
+input {
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--color-text);
+  font: inherit;
+}
+
+input::placeholder {
+  color: var(--color-text-soft);
+}

@@ -1,0 +1,329 @@
+.timeline-list,
+.insight-list,
+.settings-list {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+}
+
+.nudge-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  max-width: 920px;
+  gap: 12px;
+}
+
+.timeline-summary-grid {
+  max-width: 760px;
+}
+
+.timeline-filters {
+  display: flex;
+  flex-wrap: wrap;
+  max-width: 760px;
+  gap: 8px;
+}
+
+.timeline-filters button {
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 0 13px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+
+.timeline-filters button:hover,
+.timeline-filters .timeline-filter-active {
+  border-color: rgba(199, 215, 219, 0.32);
+  background: rgba(199, 215, 219, 0.1);
+  color: var(--color-text);
+}
+
+.timeline-item {
+  min-height: 72px;
+  border: 1px solid var(--color-border);
+  border-radius: 18px;
+  overflow: hidden;
+}
+
+.timeline-item-button {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  min-height: 72px;
+  gap: 16px;
+  border: 0;
+  padding: 16px 18px;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.timeline-item-button:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.timeline-item time {
+  color: var(--color-text-soft);
+  font-size: 13px;
+}
+
+.timeline-item time span {
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.timeline-item strong,
+.timeline-item span {
+  display: block;
+}
+
+.timeline-summary {
+  min-width: 0;
+}
+
+.timeline-context-title,
+.timeline-duration {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timeline-context-title {
+  margin-top: 4px;
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.timeline-duration {
+  margin-top: 4px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.timeline-item small {
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  padding: 6px 10px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.timeline-item-idle {
+  opacity: 0.86;
+}
+
+.timeline-item-expanded {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.timeline-detail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+.timeline-detail div {
+  min-width: 0;
+  padding: 14px 18px;
+}
+
+.timeline-detail dt {
+  color: var(--color-text-soft);
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.timeline-detail dd {
+  overflow: hidden;
+  margin: 5px 0 0;
+  color: var(--color-text);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.drift-map-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 320px;
+  gap: 16px;
+  min-height: 360px;
+}
+
+.drift-map-surface {
+  position: relative;
+  height: min(620px, calc(100vh - 166px));
+  min-height: 420px;
+  border: 1px solid var(--color-border);
+  border-radius: 24px;
+  background:
+    radial-gradient(circle at 23% 34%, rgba(199, 215, 219, 0.1), transparent 28%),
+    radial-gradient(circle at 78% 32%, rgba(192, 112, 160, 0.1), transparent 28%),
+    radial-gradient(circle at 52% 78%, rgba(96, 168, 160, 0.09), transparent 30%),
+    linear-gradient(rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+    rgba(24, 24, 26, 0.58);
+  background-size: 32px 32px;
+  overflow: hidden;
+}
+
+.drift-map-summary {
+  position: absolute;
+  z-index: 2;
+  top: 14px;
+  left: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(72px, 1fr));
+  gap: 8px;
+  max-width: min(460px, calc(100% - 28px));
+}
+
+.drift-map-summary-metric {
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 12px;
+  padding: 9px 11px;
+  background: rgba(7, 11, 20, 0.58);
+  backdrop-filter: blur(18px);
+}
+
+.drift-map-summary-metric span {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.drift-map-summary-metric strong {
+  display: block;
+  margin-top: 4px;
+  color: var(--color-text);
+  font-size: 16px;
+  line-height: 1;
+}
+
+.drift-map-surface svg {
+  width: 100%;
+  height: 100%;
+}
+
+.drift-zone-label {
+  fill: var(--color-text-muted);
+  font-size: 2.5px;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.drift-zone-label-focus {
+  fill: var(--color-focus-cyan);
+}
+
+.drift-zone-label-drift {
+  fill: var(--color-drift-magenta);
+}
+
+.drift-zone-label-recovery {
+  fill: var(--color-recovery-teal);
+}
+
+.map-status {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
+.drift-path {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  opacity: 0.64;
+  cursor: pointer;
+  transition:
+    opacity 160ms ease,
+    filter 160ms ease;
+}
+
+.drift-path:hover,
+.drift-path-selected {
+  opacity: 1;
+  filter:
+    drop-shadow(0 0 4px rgba(255, 255, 255, 0.34))
+    drop-shadow(0 0 10px rgba(199, 215, 219, 0.38));
+}
+
+.drift-path-focus {
+  stroke: var(--drift-path-focus);
+}
+
+.drift-path-drift {
+  stroke: var(--drift-path-drift);
+}
+
+.drift-path-recovery {
+  stroke: var(--drift-path-recovery);
+}
+
+.drift-path-neutral {
+  stroke: var(--drift-path-neutral);
+}
+
+.drift-path-label {
+  fill: var(--color-text);
+  font-size: 3px;
+  font-weight: 800;
+  paint-order: stroke;
+  pointer-events: none;
+  stroke: rgba(7, 11, 20, 0.8);
+  stroke-width: 0.55px;
+  text-anchor: middle;
+}
+
+.drift-node circle {
+  stroke: rgba(255, 255, 255, 0.78);
+  stroke-width: 0.6;
+  filter: drop-shadow(0 0 7px rgba(122, 151, 176, 0.35));
+}
+
+.drift-node text {
+  fill: var(--color-text);
+  font-size: 2.8px;
+  font-weight: 650;
+  paint-order: stroke;
+  stroke: rgba(7, 11, 20, 0.8);
+  stroke-width: 0.45px;
+  text-anchor: middle;
+  pointer-events: none;
+}
+
+.drift-node .drift-node-duration {
+  fill: var(--color-text-muted);
+  font-size: 2.2px;
+  font-weight: 700;
+}
+
+.drift-node-focus circle {
+  fill: var(--color-focus-blue);
+}
+
+.drift-node-browser circle {
+  fill: var(--color-focus-cyan);
+}
+
+.drift-node-drift circle {
+  fill: var(--color-drift-red);
+}
+
+.drift-node-recovery circle {
+  fill: var(--color-recovery-teal);
+}
+

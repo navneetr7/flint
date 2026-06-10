@@ -1,0 +1,238 @@
+.metric-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.today-report {
+  display: grid;
+  grid-template-columns: 210px minmax(0, 1fr);
+  align-items: stretch;
+  gap: 16px;
+  max-width: 860px;
+}
+
+.score-orbit,
+.today-report-main {
+  border: 1px solid var(--color-border);
+  border-radius: 22px;
+  background: var(--color-surface);
+  backdrop-filter: blur(24px);
+}
+
+.score-orbit {
+  position: relative;
+  display: grid;
+  min-height: 190px;
+  place-items: center;
+}
+
+.score-orbit svg {
+  position: absolute;
+  inset: 22px;
+  width: calc(100% - 44px);
+  height: calc(100% - 44px);
+  transform: rotate(-90deg);
+}
+
+.score-orbit-track,
+.score-orbit-value {
+  fill: none;
+  stroke-width: 9;
+}
+
+.score-orbit-track {
+  stroke: rgba(255, 255, 255, 0.08);
+}
+
+.score-orbit-value {
+  stroke: url("#score-gradient");
+  stroke: var(--color-focus-cyan);
+  stroke-linecap: round;
+  filter: drop-shadow(0 0 6px rgba(199, 215, 219, 0.4));
+}
+
+.score-orbit div {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.score-orbit strong {
+  font-size: 42px;
+  line-height: 1;
+}
+
+.score-orbit span {
+  margin-top: 6px;
+  color: var(--color-text-muted);
+  font-size: 12px;
+}
+
+.today-report-main {
+  display: grid;
+  align-content: center;
+  gap: 18px;
+  padding: 22px;
+}
+
+.today-report-main h2 {
+  max-width: 620px;
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.28;
+}
+
+.today-report-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.report-stat {
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.report-stat span,
+.report-stat strong {
+  display: block;
+}
+
+.report-stat span {
+  color: var(--color-text-soft);
+  font-size: 11px;
+}
+
+.report-stat strong {
+  margin-top: 6px;
+  font-size: 18px;
+}
+
+.metric-grid-secondary {
+  margin-top: -8px;
+}
+
+.metric-tile {
+  min-height: 80px;
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.metric-tile span,
+.timeline-item span {
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.metric-tile strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 24px;
+  line-height: 1;
+}
+
+.metric-tile-focus {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3), inset 0 0 42px rgba(122, 151, 176, 0.12);
+}
+
+.metric-tile-focus strong {
+  color: var(--color-focus-cyan);
+}
+
+.metric-tile-drift {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3), inset 0 0 42px rgba(203, 155, 38, 0.1);
+}
+
+.metric-tile-drift strong {
+  color: var(--color-drift-orange);
+}
+
+.metric-tile-recovery {
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.3), inset 0 0 42px rgba(96, 168, 160, 0.12);
+}
+
+.metric-tile-recovery strong {
+  color: var(--color-recovery-teal);
+}
+
+.surface-band {
+  display: grid;
+  gap: 24px;
+  border-radius: 22px;
+  padding: 24px;
+}
+
+.score-explanation {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 1.4fr);
+  align-items: start;
+}
+
+.score-explanation p {
+  max-width: 560px;
+  color: var(--color-text-muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.score-factor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.score-factor {
+  min-width: 0;
+  border: 1px solid var(--color-border);
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.score-factor span,
+.score-factor small {
+  display: block;
+  color: var(--color-text-muted);
+  font-size: 11px;
+}
+
+.score-factor strong {
+  display: block;
+  margin: 9px 0 6px;
+  color: var(--color-text);
+  font-size: 22px;
+  line-height: 1;
+}
+
+.drift-chain {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  overflow: hidden;
+}
+
+.drift-step {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  gap: 10px;
+}
+
+.drift-step span {
+  white-space: nowrap;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  padding: 9px 13px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--color-text);
+  font-size: 13px;
+}
+
+.drift-step i {
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--color-focus-cyan), var(--color-drift-magenta));
+}
+
