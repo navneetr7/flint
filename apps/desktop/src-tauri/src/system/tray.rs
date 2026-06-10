@@ -137,6 +137,18 @@ pub fn is_onboarding_done() -> bool {
     ONBOARDING_DONE.load(Ordering::Relaxed)
 }
 
+/// Resets the tray pill to the idle "Flint" state. Called after app reset so the
+/// old focus/drift pill clears immediately rather than staying frozen.
+pub fn clear_tray_pill(app: &tauri::AppHandle) {
+    let Some(tray) = app.tray_by_id("flint") else { return; };
+    if let Some(png) = render_flint_pill() {
+        if let Ok(icon) = tauri::image::Image::from_bytes(&png) {
+            let _ = tray.set_icon(Some(icon));
+        }
+    }
+    let _ = tray.set_title(None);
+}
+
 // ── Animation state ───────────────────────────────────────────────────────────
 static LAST_CATEGORY_ID: AtomicU8 = AtomicU8::new(0);
 static TARGET_OUTER_W: AtomicU32 = AtomicU32::new(0);

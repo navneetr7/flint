@@ -18,6 +18,8 @@ export function ResetAppModal({
     setError(null);
     try {
       await resetApp();
+      localStorage.clear();
+      sessionStorage.clear();
       window.location.reload();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Reset failed");
