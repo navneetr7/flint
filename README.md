@@ -26,7 +26,7 @@ Flint runs in the background and samples your active application every 5 seconds
 
 ## Tray pill
 
-A dynamic pill icon lives in the macOS menu bar and updates at 30 fps. It shows the current app category and a live focus timer. At each 15-minute focus milestone it fires a brief achievement overlay (Locked In → Deep Work → Peak Focus). After 2 minutes of distraction it shows a "Refocus?" nudge; after 10 minutes it surfaces an in-pill drift notice. The pill animates width changes with exponential easing.
+A dynamic pill icon lives in the macOS menu bar. It shows the current app category and keeps a live focus timer. At each 15-minute focus milestone it fires a brief achievement overlay. After a short period of distraction it shows a nudge; after an extended drift it surfaces an in-pill message and a system notification. The pill animates width changes with exponential easing.
 
 ## Privacy controls
 
@@ -38,7 +38,7 @@ A dynamic pill icon lives in the macOS menu bar and updates at 30 fps. It shows 
 
 ## Insight Engine (optional)
 
-Flint can use any OpenAI-compatible API to classify ambiguous apps and generate the home narrative. Bring your own key and endpoint — DeepSeek, OpenAI, Anthropic, and local models via Ollama all work. Classification results are cached locally so the same app is only sent to the API once.
+Flint can use an AI API to classify ambiguous apps and generate the home narrative. Bring your own key — OpenAI, Anthropic, DeepSeek, and OpenRouter are supported. Classification results are cached locally so the same app is only sent to the API once.
 
 ## Tech stack
 

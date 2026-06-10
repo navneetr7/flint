@@ -635,6 +635,33 @@ function AiStep({
   onApiKeyChange: (k: string) => void;
   onAiEnabledChange: (v: boolean) => void;
 }) {
+  const isKnown = selectedProvider.models.includes(selectedModel);
+  const [showCustomInput, setShowCustomInput] = useState(!isKnown && selectedModel !== "");
+  const [customModel, setCustomModel] = useState(!isKnown ? selectedModel : "");
+
+  useEffect(() => {
+    setShowCustomInput(false);
+    setCustomModel("");
+  }, [selectedProvider.id]);
+
+  function handleSelectChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const val = e.target.value;
+    if (val === "__custom__") {
+      setShowCustomInput(true);
+      setCustomModel("");
+      onModelChange("");
+    } else {
+      setShowCustomInput(false);
+      setCustomModel("");
+      onModelChange(val);
+    }
+  }
+
+  function handleCustomModelChange(e: React.ChangeEvent<HTMLInputElement>) {
+    setCustomModel(e.target.value);
+    onModelChange(e.target.value);
+  }
+
   return (
     <div className="step-content">
       <h3>
@@ -667,15 +694,27 @@ function AiStep({
         <div className="insight-model-select-wrap">
           <select
             className="insight-model-select"
-            value={selectedModel}
-            onChange={(e) => onModelChange(e.target.value)}
+            value={showCustomInput ? "__custom__" : selectedModel}
+            onChange={handleSelectChange}
           >
             {selectedProvider.models.map((m) => (
               <option key={m} value={m}>{m}</option>
             ))}
+            <option value="__custom__">Custom…</option>
           </select>
           <ChevronDown size={14} className="insight-select-icon" />
         </div>
+        {showCustomInput && (
+          <input
+            className="insight-key-input"
+            style={{ marginTop: 8 }}
+            type="text"
+            placeholder="Enter model name e.g. gpt-4o"
+            value={customModel}
+            onChange={handleCustomModelChange}
+            autoFocus
+          />
+        )}
       </div>
 
       <div className="insight-wizard-section">
