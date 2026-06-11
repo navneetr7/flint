@@ -99,6 +99,7 @@ pub fn run() {
             commands::add_excluded_app,
             commands::remove_excluded_app,
             commands::list_classification_rules,
+            commands::list_unclassified_bucket,
             commands::get_ai_classification_settings,
             commands::set_ai_classification_settings,
             commands::test_ai_config,
@@ -120,6 +121,7 @@ pub fn run() {
             commands::get_app_version,
             commands::check_for_update,
             commands::open_url,
+            commands::reclassify_unclassified_with_ai,
         ])
         .run(tauri::generate_context!())
         .expect("failed to run Flint");

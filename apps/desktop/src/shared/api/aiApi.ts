@@ -57,6 +57,11 @@ export async function testAiConfig(): Promise<string> {
   return callTauri<string>("test_ai_config");
 }
 
+export async function reclassifyUnclassifiedWithAi(): Promise<number> {
+  if (!isTauriRuntime()) return 0;
+  return callTauri<number>("reclassify_unclassified_with_ai");
+}
+
 function fromRustAiClassificationSettings(settings: RustAiClassificationSettings): AiClassificationSettings {
   return {
     enabled: settings.enabled,

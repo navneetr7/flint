@@ -7,8 +7,6 @@ pub struct AiClassificationResult {
     pub confidence: u8,
 }
 
-// ── OpenAI-compatible structs ─────────────────────────────────────────────────
-
 #[derive(Debug, Serialize)]
 struct ChatCompletionRequest {
     model: String,
@@ -49,8 +47,6 @@ struct ResponseMessage {
     content: String,
 }
 
-// ── Anthropic-native structs ──────────────────────────────────────────────────
-
 #[derive(Debug, Serialize)]
 struct AnthropicRequest {
     model: String,
@@ -77,16 +73,12 @@ struct AnthropicContent {
     text: String,
 }
 
-// ── Shared ────────────────────────────────────────────────────────────────────
-
 #[derive(Debug, Deserialize)]
 struct ClassificationPayload {
     display_name: String,
     category: String,
     confidence: Option<u8>,
 }
-
-// ── Public entry point ────────────────────────────────────────────────────────
 
 pub async fn classify_with_ai_async(
     client: &reqwest::Client,
@@ -104,8 +96,6 @@ pub async fn classify_with_ai_async(
         classify_openai_async(client, base_url, model, api_key, app_name, host, title, timeout).await
     }
 }
-
-// ── Async implementations ─────────────────────────────────────────────────────
 
 async fn classify_openai_async(
     client: &reqwest::Client,
@@ -219,9 +209,6 @@ fn network_error_str(msg: &str) -> String {
     }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-
 fn parse_payload(content: &str) -> Result<AiClassificationResult, String> {
     let json = extract_json(content)
         .ok_or_else(|| format!("No JSON object found in AI response: {}", truncate(content, 120)))?;
@@ -323,7 +310,7 @@ development, communication, learning, productivity, browser, entertainment, soci
 development   — writing, reviewing, debugging, or deploying software; IDEs, terminals, Git, cloud tools, API docs used while building
 communication — email, chat, meetings, calls
 learning      — intentional acquisition of knowledge or skills: courses, tutorials, how-to guides, technical docs, lectures
-productivity  — planning, designing, writing, note-taking, project tracking
+productivity  — planning, writing, note-taking, project tracking; AI assistants (ChatGPT, Claude, Gemini, Grok, Mistral, DeepSeek, Perplexity, Copilot); Google Docs/Sheets/Slides/Drive
 entertainment — leisure content: music, videos, shows, movies, gaming, sports, podcasts, pop culture, fandom
 social        — feeds, profiles, posting, communities
 system        — OS settings, file managers, installers, system utilities
@@ -334,18 +321,23 @@ Rules:
 - The user's likely intent matters more than the app or website.
 - Window/page title is the strongest signal.
 - Prefer specific categories over browser.
+- AI assistant websites (ChatGPT, Claude, Gemini, Grok, Mistral, DeepSeek, Perplexity, Copilot) → productivity always.
+- Google Docs, Sheets, Slides, Drive → productivity always.
 - Prefer development over learning when the user is actively building software.
 - Fictional, celebrity, gaming, sports, music, movie, TV, or pop-culture content → entertainment, even if presented analytically.
 - Use learning only when the primary goal is acquiring applicable knowledge; an explanatory or analytical title alone is not enough.
 
 Examples:
+"ChatGPT" → productivity, confidence 98
+"Claude" → productivity, confidence 98
+"Gemini" → productivity, confidence 98
+"New conversation - DeepSeek" → productivity, confidence 98
+"Google Docs" → productivity, confidence 98
 "React Hooks Explained" → learning, confidence 95
 "Kubernetes Networking Deep Dive" → learning, confidence 90
 "Fix login bug - VS Code" → development, confidence 98
 "Ramin Djawadi - The Rains Of Castamere" → entertainment, confidence 95
 "The Science of Iron Man's Suit" → entertainment, confidence 90
-"Why Interstellar's Black Hole Looks Real" → entertainment, confidence 92
-"Every Marvel Easter Egg Explained" → entertainment, confidence 88
 "Premier League Highlights" → entertainment, confidence 95
 "Instagram Home Feed" → social, confidence 98
 "Notion - Sprint Planning" → productivity, confidence 96"#

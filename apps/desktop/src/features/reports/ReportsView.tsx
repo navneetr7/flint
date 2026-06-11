@@ -29,13 +29,11 @@ export function ReportsView() {
 
   const sessions = events ?? [];
 
-  // 1. Build Focus Report for active range
   const report = useMemo(
     () => buildFocusReport(sessions, activeRange),
     [activeRange, sessions],
   );
 
-  // 2. Build general Attention Analytics
   const analytics = useMemo(
     () => buildAttentionAnalytics(sessions),
     [sessions],
@@ -62,7 +60,6 @@ export function ReportsView() {
     (b: FocusReportBucket) => b.focusSeconds > 0 || b.driftSeconds > 0 || b.idleSeconds > 0,
   );
 
-  // 3. Calculate Cognitive Domains (Proportional distributions of active time)
   const categoriesList = useMemo(() => {
     const categorySeconds: Record<string, number> = {};
     let activeTotal = 0;
@@ -92,7 +89,6 @@ export function ReportsView() {
     [categoriesList],
   );
 
-  // 4. Calculate core Focus Anchors vs Distraction Drifts ledgers (Top 3)
   const { topAnchors, topDrifts } = useMemo(() => {
     const anchorsMap: Record<string, number> = {};
     const driftsMap: Record<string, number> = {};
@@ -118,7 +114,6 @@ export function ReportsView() {
     };
   }, [sessions]);
 
-  // Aggregate Range details
   const driftRatio = totalActiveSeconds > 0
     ? Math.round(
         (sessions.reduce(

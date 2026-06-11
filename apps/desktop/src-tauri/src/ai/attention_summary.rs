@@ -13,8 +13,6 @@ pub struct AttentionSummaryResult {
     pub tip: String,
 }
 
-// ── OpenAI-compatible structs ─────────────────────────────────────────────────
-
 #[derive(Debug, Serialize)]
 struct ChatCompletionRequest {
     model: String,
@@ -55,8 +53,6 @@ struct ResponseMessage {
     content: String,
 }
 
-// ── Anthropic-native structs ──────────────────────────────────────────────────
-
 #[derive(Debug, Serialize)]
 struct AnthropicRequest {
     model: String,
@@ -83,8 +79,6 @@ struct AnthropicContent {
     text: String,
 }
 
-// ── Public entry point ────────────────────────────────────────────────────────
-
 pub fn summarize_attention_with_ai(
     base_url: &str,
     model: &str,
@@ -97,8 +91,6 @@ pub fn summarize_attention_with_ai(
     }
     summarize_openai(base_url, model, api_key, scope, compact_event_report)
 }
-
-// ── OpenAI-compatible path ────────────────────────────────────────────────────
 
 fn summarize_openai(
     base_url: &str,
@@ -147,8 +139,6 @@ fn summarize_openai(
     parse_summary(content)
 }
 
-// ── Anthropic native path ─────────────────────────────────────────────────────
-
 fn summarize_anthropic(
     base_url: &str,
     model: &str,
@@ -188,8 +178,6 @@ fn summarize_anthropic(
 
     parse_summary(content)
 }
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 fn parse_summary(content: &str) -> Result<AttentionSummaryResult, String> {
     let json = extract_json(content)

@@ -355,12 +355,30 @@ pub mod classification {
     }
 
     #[derive(Debug, Clone)]
-    struct StoredAiSettings {
-        enabled: bool,
-        provider: String,
-        model: String,
-        base_url: String,
-        encrypted_api_key: Option<String>,
+    pub struct StoredAiSettings {
+        pub enabled: bool,
+        pub provider: String,
+        pub model: String,
+        pub base_url: String,
+        pub encrypted_api_key: Option<String>,
+    }
+
+    /// An item in the unclassified bucket displayed in the UI, with aggregated stats.
+    #[derive(Debug, Clone, serde::Serialize)]
+    pub struct UnclassifiedBucketItem {
+        pub name: String,
+        pub count: u32,
+        pub duration: u64,
+    }
+
+    /// A unique unclassified app or browser host, used for bulk AI reclassification.
+    #[derive(Debug, Clone)]
+    pub struct UnclassifiedTarget {
+        pub app_name: String,
+        pub host: Option<String>,
+        pub display_name: String,
+        pub match_kind: String,
+        pub token: String,
     }
 
     #[derive(Debug, Clone)]
@@ -816,7 +834,17 @@ pub mod classification {
                         new_category = rule.category.clone();
                     } else {
                         new_app_name = event.app_name.clone();
-                        new_category = "browser".to_string();
+                        // Preserve any category set by AI (page_title / youtube_title
+                        // classifications live in ai_classifications, not in
+                        // classification_rules, so they won't surface as a matched_rule).
+                        // Only reset truly unclassified browser sessions.
+                        new_category = if event.category == "browser"
+                            || event.category == "unknown"
+                        {
+                            "browser".to_string()
+                        } else {
+                            event.category.clone()
+                        };
                     }
                 } else {
                     let normalized_app = event.app_name.trim().to_lowercase();
@@ -834,7 +862,14 @@ pub mod classification {
                             new_app_name = rule.display_name.clone();
                             new_category = rule.category.clone();
                         } else {
-                            new_category = "unknown".to_string();
+                            // Same logic: preserve AI-classified desktop app categories.
+                            new_category = if event.category == "browser"
+                                || event.category == "unknown"
+                            {
+                                "unknown".to_string()
+                            } else {
+                                event.category.clone()
+                            };
                         }
                     }
                 }
@@ -845,6 +880,159 @@ pub mod classification {
             }
 
             Ok(())
+        }
+
+        /// Public accessor for AI settings used by the bulk reclassify command.
+        pub fn deepseek_settings_pub(&self) -> Result<StoredAiSettings> {
+            self.deepseek_settings()
+        }
+
+        /// Returns one target per distinct unclassified app/host (no duplicates).
+        pub fn list_unclassified_targets(&self) -> Result<Vec<UnclassifiedTarget>> {
+            let mut stmt = self.connection.prepare(
+                "SELECT DISTINCT app_name FROM attention_events
+                 WHERE (category = 'browser' OR category = 'unknown') AND is_idle = 0
+                 ORDER BY app_name ASC",
+            )?;
+
+            let app_names = stmt
+                .query_map([], |row| row.get::<_, String>(0))?
+                .collect::<Result<Vec<_>>>()?;
+
+            let mut targets: Vec<UnclassifiedTarget> = Vec::new();
+            let mut seen_tokens: std::collections::HashSet<String> = std::collections::HashSet::new();
+
+            for app_name in app_names {
+                if let Some((prefix, context)) = app_name.split_once(": ") {
+                    let token = normalize_token(context);
+                    if token.is_empty() || seen_tokens.contains(&token) {
+                        continue;
+                    }
+                    // Skip if already classified by an existing rule.
+                    if self.find_host_rule(&token)?.is_some() {
+                        continue;
+                    }
+                    seen_tokens.insert(token.clone());
+                    let display_name = {
+                        let parts: Vec<&str> = token.split('.').collect();
+                        let core = parts.get(parts.len().saturating_sub(2)).copied().unwrap_or(&token);
+                        let mut c = core.chars();
+                        c.next().map(|ch| ch.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default()
+                    };
+                    targets.push(UnclassifiedTarget {
+                        app_name: format!("{}: {}", prefix.trim(), context.trim()),
+                        host: Some(token.clone()),
+                        display_name,
+                        match_kind: "host".to_string(),
+                        token,
+                    });
+                } else {
+                    let token = normalize_token(&app_name);
+                    if token.is_empty() || seen_tokens.contains(&token) {
+                        continue;
+                    }
+                    if self.find_exact_rule(&token)?.is_some() {
+                        continue;
+                    }
+                    seen_tokens.insert(token.clone());
+                    let display_name = {
+                        let mut c = app_name.trim().chars();
+                        c.next().map(|ch| ch.to_uppercase().collect::<String>() + c.as_str()).unwrap_or_default()
+                    };
+                    targets.push(UnclassifiedTarget {
+                        app_name: app_name.trim().to_string(),
+                        host: None,
+                        display_name,
+                        match_kind: "exact".to_string(),
+                        token,
+                    });
+                }
+            }
+
+            Ok(targets)
+        }
+
+        /// Save an AI result as a user-editable rule (priority 50, source 'user').
+        /// Returns Ok(true) if a rule was saved, Ok(false) if the AI returned a
+        /// non-informative category ("browser"/"unknown") that would not move the
+        /// item out of the unclassified bucket.
+        pub fn add_user_rule_from_ai(
+            &self,
+            target: &UnclassifiedTarget,
+            ai_result: crate::ai::classifier::AiClassificationResult,
+        ) -> Result<bool> {
+            let category = normalize_ai_category(&ai_result.category).ok_or_else(|| {
+                ai_error(format!("AI returned unsupported category '{}'", ai_result.category))
+            })?;
+            // "browser" and "unknown" are the catch-all sentinel values used to
+            // detect unclassified items — saving a rule with these categories
+            // would leave the item in the unclassified bucket forever.
+            if category == "browser" || category == "unknown" {
+                return Ok(false);
+            }
+            let display_name = if ai_result.display_name.trim().is_empty() {
+                target.display_name.clone()
+            } else {
+                ai_result.display_name.trim().to_string()
+            };
+            self.connection.execute(
+                "INSERT INTO classification_rules (token, display_name, category, match_kind, priority, source)
+                 VALUES (?1, ?2, ?3, ?4, 50, 'user')
+                 ON CONFLICT(token) DO UPDATE SET
+                     display_name = excluded.display_name,
+                     category = excluded.category,
+                     priority = excluded.priority,
+                     source = 'user'",
+                params![target.token, display_name, category, target.match_kind],
+            )?;
+            Ok(true)
+        }
+
+        /// Returns unclassified items for the UI bucket, filtering out events that
+        /// are already covered by a rule (even if that rule's category is "browser").
+        /// This prevents legitimately-classified browser sessions (Google Chrome,
+        /// Google Search, etc.) from appearing as things that need classification.
+        pub fn list_unclassified_bucket(&self) -> Result<Vec<UnclassifiedBucketItem>> {
+            let mut stmt = self.connection.prepare(
+                "SELECT app_name, COUNT(*) as event_count, SUM(duration_seconds) as total_duration
+                 FROM attention_events
+                 WHERE (category = 'browser' OR category = 'unknown') AND is_idle = 0
+                 GROUP BY app_name
+                 ORDER BY total_duration DESC",
+            )?;
+
+            let rows = stmt
+                .query_map([], |row| {
+                    Ok((
+                        row.get::<_, String>(0)?,
+                        row.get::<_, u32>(1)?,
+                        row.get::<_, u64>(2)?,
+                    ))
+                })?
+                .collect::<Result<Vec<_>>>()?;
+
+            let mut items = Vec::new();
+            for (app_name, count, duration) in rows {
+                let has_rule = if let Some((_, context)) = app_name.split_once(": ") {
+                    let token = normalize_token(context);
+                    self.find_host_rule(&token)?.is_some()
+                        || self.find_exact_rule(&token)?.is_some()
+                        || self.find_rule_by_display_name(context)?.is_some()
+                } else {
+                    let token = normalize_token(&app_name);
+                    self.find_exact_rule(&token)?.is_some()
+                };
+
+                if !has_rule {
+                    items.push(UnclassifiedBucketItem {
+                        name: app_name,
+                        count,
+                        duration,
+                    });
+                }
+            }
+
+            Ok(items)
         }
 
         fn find_rule(&self, value: &str) -> Result<Option<ClassificationRule>> {
@@ -996,6 +1184,20 @@ pub mod classification {
             Ok(rules.into_iter().find(|rule| {
                 normalized == rule.token || normalized.ends_with(&format!(".{}", rule.token))
             }))
+        }
+
+        fn find_rule_by_display_name(&self, display_name: &str) -> Result<Option<ClassificationRule>> {
+            self.connection
+                .query_row(
+                    "SELECT token, display_name, category, match_kind, priority, source
+                     FROM classification_rules
+                     WHERE display_name = ?1
+                     ORDER BY priority ASC
+                     LIMIT 1",
+                    params![display_name.trim()],
+                    map_rule,
+                )
+                .optional()
         }
     }
 

@@ -497,19 +497,16 @@ function TrailCard({ item, isStrongFocus }: { item: TrailItem; isStrongFocus: bo
   );
 }
 
-// More specific keys must come before broader ones (e.g. "claude code" before "claude")
+// Specific keys before broader ones (claude code before claude).
 const APP_ICON_ENTRIES: [string, string][] = [
-  // Claude family — specific before broad
+  // AI
   ["claude code", "/app-icons/claudecode.svg"],
   ["claude", "/app-icons/claude.svg"],
-  // Codex — app & CLI
   ["codex cli", "/app-icons/codex.svg"],
   ["codex", "/app-icons/codex.svg"],
-  // ChatGPT / OpenAI
   ["chatgpt", "/app-icons/openai.svg"],
   ["chat gpt", "/app-icons/openai.svg"],
   ["openai", "/app-icons/openai.svg"],
-  // AI / Dev tools
   ["cursor", "/app-icons/cursor.svg"],
   ["visual studio code", "/app-icons/vscode.svg"],
   ["vscode", "/app-icons/vscode.svg"],
@@ -520,7 +517,7 @@ const APP_ICON_ENTRIES: [string, string][] = [
   ["neovim", "/app-icons/neovim.svg"],
   ["nvim", "/app-icons/neovim.svg"],
   ["vim", "/app-icons/vim.svg"],
-  // Productivity & PM
+  // Productivity
   ["notion", "/app-icons/notion.svg"],
   ["obsidian", "/app-icons/obsidian.svg"],
   ["todoist", "/app-icons/todoist.svg"],
@@ -559,15 +556,13 @@ const APP_ICON_ENTRIES: [string, string][] = [
   ["snapchat", "/app-icons/snapchat.svg"],
   ["pinterest", "/app-icons/pinterest.svg"],
   ["linkedin", "/app-icons/linkedin.svg"],
-  // Version control
+  // VC + system
   ["github", "/app-icons/github.svg"],
   ["git", "/app-icons/git.svg"],
-  // Apple system
   ["finder", "/app-icons/apple.svg"],
   ["safari", "/app-icons/apple.svg"],
   ["system preferences", "/app-icons/apple.svg"],
   ["system settings", "/app-icons/apple.svg"],
-  // Screenshot
   ["flameshot", "/app-icons/flameshot.svg"],
 ];
 
@@ -575,12 +570,11 @@ function AppIconImage({ src, className }: { src: string; className: string }) {
   return <img src={src} className={className} alt="" draggable={false} />;
 }
 
-// Browser app names that should NOT be used as service identifiers when
-// matching site suffixes or window titles.
+// These browser names must not be treated as service identifiers for domain matching.
 const BROWSER_KEYS = new Set(["google chrome", "firefox", "arc", "safari"]);
 
 function resolveIconFromText(text: string, skipBrowserKeys: boolean): React.ReactElement | null {
-  // Inline SVG icons — checked before the file-icon loop so they always win.
+  // Inline SVGs win before file-icon lookup.
   if (text.includes("youtube")) {
     return (
       <svg className="app-card-icon youtube-logo" fill="currentColor" viewBox="0 0 24 24">

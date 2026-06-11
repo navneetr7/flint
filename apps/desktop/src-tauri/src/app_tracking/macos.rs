@@ -38,6 +38,7 @@ impl ActiveAppProvider for MacOsActiveAppProvider {
             "Comet" => browser_context(active_app, BrowserKind::Comet, "Comet"),
             "Atlas" | "OpenAI Atlas" => browser_context(active_app, BrowserKind::Atlas, "Atlas"),
             "Safari" => browser_context(active_app, BrowserKind::Safari, "Safari"),
+            "Firefox" => browser_context(active_app, BrowserKind::Firefox, "Firefox"),
             "Terminal" | "iTerm2" => terminal_context(active_app),
             _ => active_app,
         }
@@ -58,6 +59,7 @@ enum BrowserKind {
     Comet,
     Atlas,
     Safari,
+    Firefox,
 }
 
 pub fn browser_diagnostic_for_app(app_name: &str) -> BrowserDiagnostic {
@@ -202,6 +204,7 @@ fn active_browser_tab_result(browser: BrowserKind) -> Result<(String, String), S
             chromium_active_tab("OpenAI Atlas").or_else(|_| chromium_active_tab("Atlas"))
         }
         BrowserKind::Safari => safari_active_tab(),
+        BrowserKind::Firefox => chromium_active_tab("Firefox"),
     }
 }
 
@@ -407,6 +410,7 @@ fn browser_kind_for_app(app_name: &str) -> Option<(BrowserKind, &'static str)> {
         "Comet" => Some((BrowserKind::Comet, "Comet")),
         "Atlas" | "OpenAI Atlas" => Some((BrowserKind::Atlas, "Atlas")),
         "Safari" => Some((BrowserKind::Safari, "Safari")),
+        "Firefox" => Some((BrowserKind::Firefox, "Firefox")),
         _ => None,
     }
 }

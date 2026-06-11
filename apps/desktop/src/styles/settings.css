@@ -449,7 +449,6 @@
 .classification-tabs {
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid var(--color-border);
   padding-bottom: 12px;
 }
 
@@ -500,11 +499,54 @@
   margin-top: 8px;
 }
 
+.tab-description-block {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
 .tab-description {
   margin: 0;
   color: var(--color-text-muted);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.tab-description .label-unknown {
+  font-weight: 600;
+  color: #F0BC2C;
+}
+
+.tab-description .label-browser {
+  font-weight: 600;
+  color: #7DDCA8;
+}
+
+.reclassify-ai-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 99px;
+  border: 1px solid rgba(64, 200, 190, 0.35);
+  background: rgba(64, 200, 190, 0.08);
+  color: #40C8BE;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  align-self: flex-start;
+}
+
+.reclassify-ai-btn:hover:not(:disabled) {
+  background: rgba(64, 200, 190, 0.15);
+  border-color: rgba(64, 200, 190, 0.55);
+}
+
+.reclassify-ai-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* Unclassified List */
