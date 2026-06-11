@@ -1,6 +1,6 @@
 use rusqlite::{params, Connection, Result};
 
-pub const CURRENT_SCHEMA_VERSION: i64 = 8;
+pub const CURRENT_SCHEMA_VERSION: i64 = 9;
 
 pub fn run_migrations(connection: &Connection) -> Result<()> {
     ensure_migration_table(connection)?;
@@ -13,6 +13,7 @@ pub fn run_migrations(connection: &Connection) -> Result<()> {
     apply_focus_milestone_target(connection)?;
     apply_onboarding_flag(connection)?;
     seed_classification_rules(connection)?;
+    reclassify_ai_productivity_rules(connection)?;
     connection.pragma_update(None, "user_version", CURRENT_SCHEMA_VERSION)?;
 
     Ok(())
@@ -277,6 +278,86 @@ fn record_migration(connection: &Connection, version: i64, name: &str) -> Result
     Ok(())
 }
 
+/// One-time migration: correct the category for AI/productivity tools that were
+/// seeded as "browser", and back-fill existing attention_events so the
+/// unclassified bucket drains without requiring a manual reclassify.
+fn reclassify_ai_productivity_rules(connection: &Connection) -> Result<()> {
+    connection.execute_batch(
+        "
+        -- Fix seed rules that were incorrectly marked 'browser'
+        UPDATE classification_rules
+        SET category = 'productivity'
+        WHERE source = 'seed' AND token IN (
+            'chatgpt.com', 'claude.ai', 'perplexity.ai',
+            'docs.google.com', 'drive.google.com',
+            'sheets.google.com', 'slides.google.com'
+        );
+
+        -- Fix any token='grok' rule incorrectly saved as 'social' by AI
+        UPDATE classification_rules
+        SET category = 'productivity'
+        WHERE token = 'grok' AND category = 'social';
+
+        -- Add new AI-tool seed rules (no-op if they already exist with a user rule)
+        INSERT OR IGNORE INTO classification_rules (token, display_name, category, match_kind, priority, source) VALUES
+            ('grok',                    'Grok',      'productivity', 'exact', 10, 'seed'),
+            ('grok.com',                'Grok',      'productivity', 'host', 20, 'seed'),
+            ('x.ai',                    'Grok',      'productivity', 'host', 20, 'seed'),
+            ('chat.mistral.ai',         'Mistral',   'productivity', 'host', 20, 'seed'),
+            ('mistral.ai',              'Mistral',   'productivity', 'host', 20, 'seed'),
+            ('deepseek.com',            'DeepSeek',  'productivity', 'host', 20, 'seed'),
+            ('gemini.google.com',       'Gemini',    'productivity', 'host', 20, 'seed'),
+            ('copilot.microsoft.com',   'Copilot',   'productivity', 'host', 20, 'seed');
+
+        -- Fix existing Grok events wrongly classified as 'social'
+        UPDATE attention_events
+        SET category = 'productivity'
+        WHERE is_idle = 0
+          AND category = 'social'
+          AND (app_name = 'Grok' OR app_name LIKE '%: Grok' OR app_name LIKE 'Grok: %');
+
+        -- Back-fill existing events whose display-name or host matches AI/productivity sites
+        UPDATE attention_events
+        SET category = 'productivity'
+        WHERE is_idle = 0
+          AND category IN ('browser', 'unknown')
+          AND (
+              -- display-name format produced by classify_app
+              app_name LIKE '%: Google Docs'
+           OR app_name LIKE '%: Google Sheets'
+           OR app_name LIKE '%: Google Slides'
+           OR app_name LIKE '%: Google Drive'
+           OR app_name LIKE '%: ChatGPT'
+           OR app_name LIKE '%: Claude'
+           OR app_name LIKE '%: Perplexity'
+           OR app_name LIKE '%: DeepSeek'
+           OR app_name LIKE '%: Gemini'
+           OR app_name LIKE '%: Mistral'
+           OR app_name LIKE '%: Grok'
+           OR app_name = 'Grok'
+           OR app_name LIKE '%: Copilot'
+              -- raw-host format (in case the domain wasn't mapped yet)
+           OR app_name LIKE '%: docs.google.com'
+           OR app_name LIKE '%: drive.google.com'
+           OR app_name LIKE '%: sheets.google.com'
+           OR app_name LIKE '%: slides.google.com'
+           OR app_name LIKE '%: chatgpt.com'
+           OR app_name LIKE '%: claude.ai'
+           OR app_name LIKE '%: perplexity.ai'
+           OR app_name LIKE '%: deepseek.com'
+           OR app_name LIKE '%: gemini.google.com'
+           OR app_name LIKE '%: copilot.microsoft.com'
+           OR app_name LIKE '%: grok.com'
+           OR app_name LIKE '%: x.ai'
+           OR app_name LIKE '%: chat.mistral.ai'
+           OR app_name LIKE '%: mistral.ai'
+          );
+        ",
+    )?;
+    record_migration(connection, 9, "ai_productivity_reclassify")?;
+    Ok(())
+}
+
 fn seed_classification_rules(connection: &Connection) -> Result<()> {
     let mut statement = connection.prepare(
         "
@@ -492,15 +573,23 @@ const CLASSIFICATION_RULES: &[(&str, &str, &str, &str, i64)] = &[
     ("zoom.us", "Zoom", "communication", "host", 20),
     ("web.whatsapp.com", "WhatsApp", "communication", "host", 20),
     ("telegram.org", "Telegram", "communication", "host", 20),
-    ("docs.google.com", "Google Docs", "browser", "host", 20),
-    ("drive.google.com", "Google Drive", "browser", "host", 20),
-    ("sheets.google.com", "Google Sheets", "browser", "host", 20),
-    ("slides.google.com", "Google Slides", "browser", "host", 20),
+    ("docs.google.com", "Google Docs", "productivity", "host", 20),
+    ("drive.google.com", "Google Drive", "productivity", "host", 20),
+    ("sheets.google.com", "Google Sheets", "productivity", "host", 20),
+    ("slides.google.com", "Google Slides", "productivity", "host", 20),
     ("google.com", "Google Search", "browser", "host", 100),
-    ("perplexity.ai", "Perplexity", "browser", "host", 20),
-    ("wikipedia.org", "Wikipedia", "browser", "host", 20),
-    ("chatgpt.com", "ChatGPT", "browser", "host", 20),
-    ("claude.ai", "Claude", "browser", "host", 20),
+    ("perplexity.ai", "Perplexity", "productivity", "host", 20),
+    ("wikipedia.org", "Wikipedia", "learning", "host", 20),
+    ("chatgpt.com", "ChatGPT", "productivity", "host", 20),
+    ("claude.ai", "Claude", "productivity", "host", 20),
+    ("grok", "Grok", "productivity", "exact", 10),
+    ("grok.com", "Grok", "productivity", "host", 20),
+    ("x.ai", "Grok", "productivity", "host", 20),
+    ("chat.mistral.ai", "Mistral", "productivity", "host", 20),
+    ("mistral.ai", "Mistral", "productivity", "host", 20),
+    ("deepseek.com", "DeepSeek", "productivity", "host", 20),
+    ("gemini.google.com", "Gemini", "productivity", "host", 20),
+    ("copilot.microsoft.com", "Copilot", "productivity", "host", 20),
     ("youtube.com", "YouTube", "entertainment", "host", 20),
     ("youtu.be", "YouTube", "entertainment", "host", 20),
     ("netflix.com", "Netflix", "entertainment", "host", 20),
