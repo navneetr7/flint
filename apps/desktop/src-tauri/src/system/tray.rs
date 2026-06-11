@@ -26,7 +26,6 @@ const MENU_QUIT: &str = "quit";
 
 static SF_FONT: OnceLock<Vec<u8>> = OnceLock::new();
 
-// ── Amazing! / milestone state ────────────────────────────────────────────────
 static LAST_ANNOUNCED_BLOCK: AtomicU64 = AtomicU64::new(0);
 static AMAZING_UNTIL_SECS: AtomicU64 = AtomicU64::new(0);
 // f32 bits: 0.0 = transparent, 1.0 = opaque. Fast loop fades in/out.
@@ -35,7 +34,6 @@ static AMAZING_ALPHA: AtomicU32 = AtomicU32::new(0);
 // Focus history older than this is ignored (prevents carry-over across restarts).
 static APP_START_UNIX: AtomicU64 = AtomicU64::new(0);
 
-// ── Progress ring state ───────────────────────────────────────────────────────
 // Frozen during distraction; base + sample_unix enable 1s interpolation between 5s DB samples.
 static FOCUS_RING_SECS: AtomicU64 = AtomicU64::new(0);
 static FOCUS_RING_BASE_SECS: AtomicU64 = AtomicU64::new(0);
@@ -43,7 +41,6 @@ static FOCUS_RING_SAMPLE_UNIX: AtomicU64 = AtomicU64::new(0);
 static LAST_SAMPLE_IS_FOCUS: AtomicBool = AtomicBool::new(false);
 static LAST_DURATION_SECS: AtomicU64 = AtomicU64::new(0);
 
-// ── Distraction / refocus state ───────────────────────────────────────────────
 static WAS_EVER_FOCUSED: AtomicBool = AtomicBool::new(false);
 static FOCUS_LEFT_AT_SECS: AtomicU64 = AtomicU64::new(0);
 static DISTRACTION_ALERTED: AtomicBool = AtomicBool::new(false);
@@ -125,7 +122,6 @@ fn current_drift_message() -> &'static str {
     }
 }
 
-// ── Onboarding gate ───────────────────────────────────────────────────────────
 // Suppresses sampling and pill animation until onboarding is marked complete.
 static ONBOARDING_DONE: AtomicBool = AtomicBool::new(false);
 
@@ -149,7 +145,6 @@ pub fn clear_tray_pill(app: &tauri::AppHandle) {
     let _ = tray.set_title::<&str>(None);
 }
 
-// ── Animation state ───────────────────────────────────────────────────────────
 static LAST_CATEGORY_ID: AtomicU8 = AtomicU8::new(0);
 static TARGET_OUTER_W: AtomicU32 = AtomicU32::new(0);
 static ANIM_OUTER_W: AtomicU32 = AtomicU32::new(0);
@@ -172,8 +167,6 @@ fn now_secs() -> u64 {
         .unwrap_or_default()
         .as_secs()
 }
-
-// ── tray lifecycle ────────────────────────────────────────────────────────────
 
 pub fn setup_tray(app: &mut App) -> tauri::Result<()> {
     APP_START_UNIX.store(now_secs(), Ordering::Relaxed);
@@ -547,10 +540,6 @@ fn shell_quote(s: &str) -> String {
     format!("\"{}\"", s.replace('"', "\\\"").replace('\'', "\\'"))
 }
 
-// ── Amazing! state machine ────────────────────────────────────────────────────
-
-// Returns true when a new 15-min block just completed.
-// Target is derived dynamically: block N completes at (N * 900) seconds.
 fn tick_amazing_state(category: &str, duration_seconds: u64, is_idle: bool) -> bool {
     let is_focus = !is_idle && is_focus_category(category);
     if !is_focus {
@@ -604,10 +593,7 @@ fn is_amazing_active() -> bool {
         || f32::from_bits(AMAZING_ALPHA.load(Ordering::Relaxed)) > 0.001
 }
 
-// ── Distraction state machine ─────────────────────────────────────────────────
 // Timeline: silent → 2m "Refocus?" nudge → 4m streak pause → 10m "Still here?" prompt.
-
-// Returns (refocus_fired, deep_drift_fired).
 fn tick_distraction_state(
     _app: &AppHandle,
     category: &str,
@@ -688,8 +674,6 @@ fn distraction_elapsed_secs() -> u64 {
     if left_at == 0 { return 0; }
     now_secs().saturating_sub(left_at)
 }
-
-// ── pill renderer ─────────────────────────────────────────────────────────────
 
 fn render_flint_pill() -> Option<Vec<u8>> {
     let font_data = load_font();
@@ -914,8 +898,6 @@ fn encode_png(img: RgbaImage, w: u32, h: u32) -> Option<Vec<u8>> {
     }
     Some(buf)
 }
-
-// ── helpers ───────────────────────────────────────────────────────────────────
 
 fn text_baseline(font: &FontRef, scale: PxScale, container_h: u32) -> f32 {
     let s = font.as_scaled(scale);
@@ -1181,8 +1163,6 @@ fn badge_colors_distraction() -> ([u8; 4], [u8; 4], [u8; 4]) {
         [255, 215, 130, 255],  // bright warm orange text
     )
 }
-
-// ── tray menu snapshot ────────────────────────────────────────────────────────
 
 fn build_tray_menu<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Menu<R>> {
     let snapshot = tray_snapshot(app);

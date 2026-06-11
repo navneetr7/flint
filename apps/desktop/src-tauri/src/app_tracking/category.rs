@@ -392,7 +392,7 @@ const CATEGORY_ENTRIES: &[CategoryEntry] = &[
         token: "bluesky",
         category: "social",
     },
-    // ── system ────────────────────────────────────────────────────────────────
+    // system
     CategoryEntry {
         token: "finder",
         category: "system",
@@ -604,7 +604,7 @@ const BROWSER_ENTRIES: &[BrowserEntry] = &[
         host: "bsky.app",
         name: "Bluesky",
     },
-    // ── communication ─────────────────────────────────────────────────────────
+    // communication
     BrowserEntry {
         host: "zoho.com",
         name: "Zoho",
@@ -641,7 +641,7 @@ const BROWSER_ENTRIES: &[BrowserEntry] = &[
         host: "web.telegram.org",
         name: "Telegram",
     },
-    // ── productivity ─────────────────────────────────────────────────────────
+    // productivity
     BrowserEntry {
         host: "notion.so",
         name: "Notion",
@@ -678,7 +678,7 @@ const BROWSER_ENTRIES: &[BrowserEntry] = &[
         host: "basecamp.com",
         name: "Basecamp",
     },
-    // ── development ───────────────────────────────────────────────────────────
+    // development
     BrowserEntry {
         host: "linear.app",
         name: "Linear",
@@ -695,7 +695,7 @@ const BROWSER_ENTRIES: &[BrowserEntry] = &[
         host: "chat.openai.com",
         name: "ChatGPT",
     },
-    // ── design ───────────────────────────────────────────────────────────────
+    // design
     BrowserEntry {
         host: "miro.com",
         name: "Miro",

@@ -8,10 +8,7 @@ import { formatDuration } from "@/shared/lib/formatDuration";
 import { flowState, type FlowState } from "@/shared/lib/flowState";
 import { saveCardImage } from "@/shared/api/attentionApi";
 
-// ── Count-up animation ────────────────────────────────────────────────────────
-// Counts from the current displayed value to `target` using ease-out cubic.
-// Starts from 0 on mount, then transitions from wherever it stopped on updates.
-
+// Counts from current value to target (ease-out cubic). Resumes from last value on updates.
 function useCountUp(target: number, duration = 0.85): number {
   const [display, setDisplay] = useState(0);
   const rafRef  = useRef<number>(0);
@@ -38,8 +35,6 @@ function useCountUp(target: number, duration = 0.85): number {
   return display;
 }
 
-// ── Time block definitions ────────────────────────────────────────────────────
-
 type BlockId = "morning" | "afternoon" | "evening" | "night";
 
 const TIME_BLOCKS: { id: BlockId; label: string; startHour: number; endHour: number }[] = [
@@ -48,8 +43,6 @@ const TIME_BLOCKS: { id: BlockId; label: string; startHour: number; endHour: num
   { id: "evening",   label: "Evening",   startHour: 17, endHour: 21 },
   { id: "night",     label: "Night",     startHour: 21, endHour: 29 },
 ];
-
-// ── Types ─────────────────────────────────────────────────────────────────────
 
 interface BlockData {
   id: BlockId;
@@ -80,8 +73,6 @@ interface GroundLeafItem {
   color: string;
   delay: number; // stagger offset so each leaf lifts/lands at a slightly different time
 }
-
-// ── Leaf layout ───────────────────────────────────────────────────────────────
 
 const LEAVES: LeafDef[] = [
   { id: 0,  x: 88,  y: 118, rx: 9,  ry: 6,  rotate: -35 },
@@ -129,8 +120,6 @@ const GROUND_LEAF_POOL = [
   { x: 216, y: 198, rx: 4.5, ry: 2.4, rotate: 55  },
   { x: 242, y: 190, rx: 5,   ry: 3,   rotate: -20 },
 ] as const;
-
-// ── Data helpers ──────────────────────────────────────────────────────────────
 
 const FLOW_STATE_LABEL: Record<FlowState, string> = {
   focused:    "focused",
@@ -220,8 +209,6 @@ function treeDescription(score: number) {
   return "Dormant — rest and recover";
 }
 
-// ── Weather icons ─────────────────────────────────────────────────────────────
-
 function WeatherIcon({ block, size = 36, animated = false }: { block: BlockId; size?: number; animated?: boolean }) {
   if (block === "morning") {
     return (
@@ -284,8 +271,6 @@ function WeatherIcon({ block, size = 36, animated = false }: { block: BlockId; s
     </svg>
   );
 }
-
-// ── FocusTree ─────────────────────────────────────────────────────────────────
 
 function FocusTree({
   score,
@@ -467,8 +452,6 @@ function FocusTree({
   );
 }
 
-// ── Time block card (small) ───────────────────────────────────────────────────
-
 function BlockCardSmall({
   block,
   active,
@@ -494,8 +477,6 @@ function BlockCardSmall({
     </button>
   );
 }
-
-// ── Time block card (expanded) ────────────────────────────────────────────────
 
 function BlockCardExpanded({
   block,
@@ -567,8 +548,6 @@ function BlockCardExpanded({
     </motion.div>
   );
 }
-
-// ── Main modal ────────────────────────────────────────────────────────────────
 
 interface DayReplayModalProps {
   events: AttentionEvent[];
