@@ -158,6 +158,17 @@ export async function getHomeAttentionNarratives(now = new Date()): Promise<Home
   );
 }
 
+export type UnclassifiedBucketItem = {
+  name: string;
+  count: number;
+  duration: number;
+};
+
+export async function listUnclassifiedBucket(): Promise<UnclassifiedBucketItem[]> {
+  if (!isTauriRuntime()) return [];
+  return callTauri<UnclassifiedBucketItem[]>("list_unclassified_bucket");
+}
+
 export async function listClassificationRules(): Promise<ClassificationRule[]> {
   if (!isTauriRuntime()) {
     return [

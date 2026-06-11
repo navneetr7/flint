@@ -3,9 +3,15 @@ import {
   addClassificationRule,
   deleteClassificationRule,
   listClassificationRules,
-  listAttentionEvents,
+  listUnclassifiedBucket,
   type ClassificationRule,
+  type UnclassifiedBucketItem,
 } from "@/shared/api/attentionApi";
+import {
+  getAiClassificationSettings,
+  reclassifyUnclassifiedWithAi,
+  type AiClassificationSettings,
+} from "@/shared/api/aiApi";
 import { useAppStore } from "@/shared/store/appStore";
 import { formatDuration } from "@/shared/lib/formatDuration";
 import { CATEGORY_OPTIONS } from "@/shared/lib/categoryMeta";
@@ -23,15 +29,17 @@ const UNCLASSIFIED_LIMIT = 5;
 
 export function ClassificationSettings() {
   const [rules, setRules] = useState<ClassificationRule[]>([]);
-  const [unclassified, setUnclassified] = useState<{ name: string; count: number; duration: number }[]>([]);
+  const [unclassified, setUnclassified] = useState<UnclassifiedBucketItem[]>([]);
+  const [aiSettings, setAiSettings] = useState<AiClassificationSettings | null>(null);
+  const [reclassifying, setReclassifying] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
-  
+
   // Form fields
   const [token, setToken] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [category, setCategory] = useState("development");
   const [matchKind, setMatchKind] = useState("exact");
-  
+
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"rules" | "unclassified">("unclassified");
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -39,6 +47,10 @@ export function ClassificationSettings() {
 
   const attentionRevision = useAppStore((state) => state.attentionRevision);
   const bumpAttentionRevision = useAppStore((state) => state.bumpAttentionRevision);
+
+  useEffect(() => {
+    void getAiClassificationSettings().then(setAiSettings).catch(() => {});
+  }, []);
 
   useEffect(() => {
     void loadData();
@@ -52,34 +64,12 @@ export function ClassificationSettings() {
 
   async function loadData() {
     try {
-      const activeRules = await listClassificationRules();
+      const [activeRules, bucketItems] = await Promise.all([
+        listClassificationRules(),
+        listUnclassifiedBucket(),
+      ]);
       setRules(activeRules);
-
-      // Fetch events to detect unclassified apps & sites
-      const events = await listAttentionEvents();
-      
-      const counts: Record<string, { count: number; duration: number }> = {};
-      events.forEach((event) => {
-        // Unclassified is marked as "unknown", or "browser" category which hasn't matched a custom rule
-        if (event.category === "unknown" || event.category === "browser") {
-          const key = event.appName;
-          if (!counts[key]) {
-            counts[key] = { count: 0, duration: 0 };
-          }
-          counts[key].count += 1;
-          counts[key].duration += event.durationSeconds;
-        }
-      });
-
-      const unclassifiedList = Object.entries(counts)
-        .map(([name, stats]) => ({
-          name,
-          count: stats.count,
-          duration: stats.duration,
-        }))
-        .sort((a, b) => b.duration - a.duration);
-
-      setUnclassified(unclassifiedList);
+      setUnclassified(bucketItems);
     } catch {
       // Ignored in preview
     }
@@ -119,6 +109,25 @@ export function ClassificationSettings() {
       bumpAttentionRevision();
     } catch {
       // Ignored
+    }
+  }
+
+  async function handleReclassifyWithAi() {
+    setReclassifying(true);
+    try {
+      const count = await reclassifyUnclassifiedWithAi();
+      if (count > 0) {
+        setSuccessMessage(`AI classified ${count} item${count === 1 ? "" : "s"}`);
+        setTimeout(() => setSuccessMessage(null), 4000);
+        bumpAttentionRevision();
+      } else {
+        setSuccessMessage("No new items to classify");
+        setTimeout(() => setSuccessMessage(null), 3000);
+      }
+    } catch {
+      // Ignored
+    } finally {
+      setReclassifying(false);
     }
   }
 
@@ -187,9 +196,29 @@ export function ClassificationSettings() {
 
       {activeTab === "unclassified" ? (
         <div className="tab-content">
-          <p className="tab-description">
-            Below are application logs and browser sites currently categorized as **"Unknown"** or generic **"Browser"**. Classifying them completes your focus score and drift metrics.
-          </p>
+          <div className="tab-description-block">
+            <p className="tab-description">
+              Below are application logs and browser sites currently categorized as{" "}
+              <span className="label-unknown">"Unknown"</span> or generic{" "}
+              <span className="label-browser">"Browser"</span>. Classifying them completes your focus score and drift metrics.
+            </p>
+            {successMessage && (
+              <div className="form-alert alert-success">
+                <span>{successMessage}</span>
+              </div>
+            )}
+            {aiSettings?.enabled && aiSettings.hasApiKey && (
+              <button
+                className="reclassify-ai-btn"
+                disabled={reclassifying || unclassified.length === 0}
+                onClick={() => void handleReclassifyWithAi()}
+                type="button"
+              >
+                <Sparkles size={12} />
+                {reclassifying ? "Classifying…" : "Reclassify with AI"}
+              </button>
+            )}
+          </div>
 
           {unclassified.length === 0 ? (
             <div className="empty-state-card">
