@@ -692,8 +692,6 @@ pub fn get_home_attention_narratives(
     Ok(HomeAttentionNarratives { today, previous_day })
 }
 
-}
-
 fn build_today_from_hourly(
     _hourly: &[HourlySummary],
     _current_hour: u8,
