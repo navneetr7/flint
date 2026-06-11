@@ -129,7 +129,6 @@ pub fn get_permission_status(state: State<AppState>) -> Result<PermissionStatus,
     })
 }
 
-/// Records one attention sample and refreshes the tray pill.
 pub fn sample_and_refresh(app: &AppHandle) -> Option<AttentionEvent> {
     #[cfg(target_os = "macos")]
     {
@@ -240,17 +239,18 @@ async fn classify_and_emit(
         }
     };
 
+    let mut reclassified = false;
     if let Some(result) = ai_result {
         if let Ok(db) = state.database.lock() {
             let repo = ClassificationRepository::new(db.connection());
             if let Ok(classified) = repo.save_ai_result(&request, result) {
-                // Patch the category on the event that triggered this AI request.
-                // The tracker wrote it to the DB immediately with the seed-rule category
-                // (before AI ran); update it now so the trail shows the correct state.
+                // Tracker already wrote the seed-rule category immediately on sample.
+                // Patch it now so the live trail (and any open views) see the final AI label.
                 let _ = db.connection().execute(
                     "UPDATE attention_events SET category = ?1 WHERE id = ?2",
                     rusqlite::params![classified.category, event.id],
                 );
+                reclassified = true;
             }
         }
     }
@@ -261,6 +261,10 @@ async fn classify_and_emit(
     }
 
     let _ = app.emit("attention-sampled", &event);
+    // Tell the frontend to re-render the trail with the updated category.
+    if reclassified {
+        let _ = app.emit("events-reclassified", ());
+    }
 }
 
 #[tauri::command]
@@ -688,7 +692,7 @@ pub fn get_home_attention_narratives(
     Ok(HomeAttentionNarratives { today, previous_day })
 }
 
-// ── Helpers ────────────────────────────────────────────────────────────────────
+}
 
 fn build_today_from_hourly(
     _hourly: &[HourlySummary],
@@ -907,6 +911,19 @@ pub fn list_classification_rules(
     let repository = ClassificationRepository::new(database.connection());
 
     repository.list_rules().map_err(|error| error.to_string())
+}
+
+#[tauri::command]
+pub fn list_unclassified_bucket(
+    state: State<AppState>,
+) -> Result<Vec<crate::database::repositories::classification::UnclassifiedBucketItem>, String> {
+    let database = state
+        .database
+        .lock()
+        .map_err(|_| "Database lock unavailable".to_string())?;
+    let repository = ClassificationRepository::new(database.connection());
+
+    repository.list_unclassified_bucket().map_err(|e| e.to_string())
 }
 
 #[tauri::command]
@@ -1428,8 +1445,7 @@ fn minutes(seconds: u64) -> u64 {
     seconds / 60
 }
 
-/// Checks browser automation permission for a specific browser by name.
-/// Works regardless of which app is currently in the foreground.
+/// Works from background (no foreground requirement).
 #[tauri::command]
 pub fn check_browser_permission(browser_name: String) -> BrowserPermissionResult {
     #[cfg(target_os = "macos")]
@@ -1514,7 +1530,6 @@ pub fn request_accessibility_permission() -> bool {
     false
 }
 
-/// Opens System Settings → Privacy & Security → Accessibility on macOS.
 #[tauri::command]
 pub fn open_accessibility_settings() {
     #[cfg(target_os = "macos")]
@@ -1523,7 +1538,6 @@ pub fn open_accessibility_settings() {
     );
 }
 
-/// Opens System Settings → Privacy & Security → Automation on macOS.
 #[tauri::command]
 pub fn open_automation_settings() {
     #[cfg(target_os = "macos")]
@@ -1724,8 +1738,108 @@ fn semver_gt(a: &str, b: &str) -> bool {
     parse(a) > parse(b)
 }
 
-/// Opens a URL in the system default browser using macOS `open`.
 #[tauri::command]
 pub fn open_url(url: String) {
     let _ = std::process::Command::new("open").arg(&url).spawn();
+}
+
+#[tauri::command]
+pub async fn reclassify_unclassified_with_ai(app: AppHandle) -> Result<u32, String> {
+    use crate::{
+        ai::classifier::classify_with_ai_async,
+        database::repositories::classification::ClassificationRepository,
+        AppState,
+    };
+
+    let state = app.state::<AppState>();
+
+    // Collect unclassified targets and AI settings under the lock.
+    let (targets, settings, api_key, client) = {
+        let db = state
+            .database
+            .lock()
+            .map_err(|_| "Database lock unavailable".to_string())?;
+        let repo = ClassificationRepository::new(db.connection());
+
+        let stored = repo
+            .deepseek_settings_pub()
+            .map_err(|e| e.to_string())?;
+        if !stored.enabled {
+            return Err("AI classification is disabled".to_string());
+        }
+        let encrypted = stored
+            .encrypted_api_key
+            .clone()
+            .ok_or_else(|| "No API key configured".to_string())?;
+        let api_key =
+            crate::encryption::vault::LocalVault::decrypt_secret(&encrypted).map_err(|e| e.to_string())?;
+
+        let targets = repo
+            .list_unclassified_targets()
+            .map_err(|e| e.to_string())?;
+
+        (targets, stored, api_key, state.http_client.clone())
+    };
+
+    if targets.is_empty() {
+        return Ok(0);
+    }
+
+    let timeout = std::time::Duration::from_secs(30);
+    let mut classified_count: u32 = 0;
+
+    for target in &targets {
+        let result = {
+            let first = classify_with_ai_async(
+                &client,
+                &settings.base_url,
+                &settings.model,
+                &api_key,
+                &target.app_name,
+                target.host.as_deref(),
+                None,
+                timeout,
+            )
+            .await;
+
+            match first {
+                Ok(r) => Some(r),
+                Err(_) => {
+                    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+                    classify_with_ai_async(
+                        &client,
+                        &settings.base_url,
+                        &settings.model,
+                        &api_key,
+                        &target.app_name,
+                        target.host.as_deref(),
+                        None,
+                        timeout,
+                    )
+                    .await
+                    .ok()
+                }
+            }
+        };
+
+        if let Some(ai_result) = result {
+            if let Ok(db) = state.database.lock() {
+                let repo = ClassificationRepository::new(db.connection());
+                if repo.add_user_rule_from_ai(&target, ai_result).unwrap_or(false) {
+                    classified_count += 1;
+                }
+            }
+        }
+    }
+
+    // Re-apply all rules to existing events now that new rules are in.
+    if classified_count > 0 {
+        if let Ok(db) = state.database.lock() {
+            let repo = ClassificationRepository::new(db.connection());
+            let _ = repo.reclassify_all_events();
+        }
+        let _ = app.emit("events-reclassified", ());
+    }
+
+    Ok(classified_count)
 }
